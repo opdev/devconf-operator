@@ -1,0 +1,12 @@
+apiVersion: devconfcz.opdev.com/v1alpha1
+kind: Karbanatek
+metadata:
+  labels:
+    app.kubernetes.io/name: karbanatek
+    app.kubernetes.io/instance: karbanatek-sample
+    app.kubernetes.io/part-of: devconf-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: devconf-operator
+  name: karbanatek-sample
+spec:
+  # TODO(user): Add fields here
