@@ -42,7 +42,7 @@ const recipeFinalizer = "devconfcz.opdev.com/finalizer"
 
 // Definitions to manage status conditions
 const (
-	// typeAvailableRecipe represents the status of the Deployment reconciliation
+	// typeAvailableRecipe represents the status of the StatefulSet reconciliation
 	typeAvailableRecipe = "Available"
 	// typeDegradedRecipe represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
 	typeDegradedRecipe = "Degraded"
@@ -63,7 +63,7 @@ type RecipeReconciler struct {
 //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -124,19 +124,19 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.Deployment{}
+	// Check if the statefulset already exists, if not create a new one
+	found := &appsv1.StatefulSet{}
 	err = r.Get(ctx, types.NamespacedName{Name: recipe.Name, Namespace: recipe.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new deployment
-		dep, err := r.deploymentForRecipe(recipe)
+		// Define a new statefulset
+		sts, err := r.statefulsetForRecipe(recipe)
 		if err != nil {
-			log.Error(err, "Failed to define new Deployment resource for Recipe")
+			log.Error(err, "Failed to define new StatefulSet resource for Recipe")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&recipe.Status.Conditions, metav1.Condition{Type: typeAvailableRecipe,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", recipe.Name, err)})
+				Message: fmt.Sprintf("Failed to create StatefulSet for the custom resource (%s): (%s)", recipe.Name, err)})
 
 			if err := r.Status().Update(ctx, recipe); err != nil {
 				log.Error(err, "Failed to update Recipe status")
@@ -146,34 +146,34 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, err
 		}
 
-		log.Info("Creating a new Deployment",
-			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		if err = r.Create(ctx, dep); err != nil {
-			log.Error(err, "Failed to create new Deployment",
-				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		log.Info("Creating a new StatefulSet",
+			"StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
+		if err = r.Create(ctx, sts); err != nil {
+			log.Error(err, "Failed to create new StatefulSet",
+				"StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
 			return ctrl.Result{}, err
 		}
 
-		// Deployment created successfully
+		// StatefulSet created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Deployment")
+		log.Error(err, "Failed to get StatefulSet")
 		// Let's return the error for the reconciliation be re-trigged again
 		return ctrl.Result{}, err
 	}
 
 	// The CRD API is defining that the Recipe type, have a RecipeSpec.Size field
-	// to set the quantity of Deployment instances is the desired state on the cluster.
-	// Therefore, the following code will ensure the Deployment size is the same as defined
+	// to set the quantity of StatefulSet instances is the desired state on the cluster.
+	// Therefore, the following code will ensure the StatefulSet size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
 	size := recipe.Spec.Size
 	if *found.Spec.Replicas != size {
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+			log.Error(err, "Failed to update StatefulSet",
+				"StatefulSet.Namespace", found.Namespace, "StatefulSet.Name", found.Name)
 
 			// Re-fetch the recipe Custom Resource before update the status
 			// so that we have the latest state of the resource on the cluster and we will avoid
@@ -206,7 +206,7 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// The following implementation will update the status
 	meta.SetStatusCondition(&recipe.Status.Conditions, metav1.Condition{Type: typeAvailableRecipe,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", recipe.Name, size)})
+		Message: fmt.Sprintf("StatefulSet for custom resource (%s) with %d replicas created successfully", recipe.Name, size)})
 
 	if err := r.Status().Update(ctx, recipe); err != nil {
 		log.Error(err, "Failed to update Recipe status")
@@ -216,10 +216,9 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-
-// deploymentForRecipe returns a Recipe Deployment object
-func (r *RecipeReconciler) deploymentForRecipe(
-	recipe *devconfczv1alpha1.Recipe) (*appsv1.Deployment, error) {
+// statefulsetForRecipe returns a Recipe StatefulSet object
+func (r *RecipeReconciler) statefulsetForRecipe(
+	recipe *devconfczv1alpha1.Recipe) (*appsv1.StatefulSet, error) {
 	ls := labelsForRecipe(recipe.Name)
 	replicas := recipe.Spec.Size
 
@@ -229,73 +228,46 @@ func (r *RecipeReconciler) deploymentForRecipe(
 		return nil, err
 	}
 
-	dep := &appsv1.Deployment{
+	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      recipe.Name,
 			Namespace: recipe.Namespace,
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			ServiceName: recipe.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(user): Uncomment the following code to configure the nodeAffinity expression
-					// according to the platforms which are supported by your solution. It is considered
-					// best practice to support multiple architectures. build your manager image using the
-					// makefile target docker-buildx. Also, you can use docker manifest inspect <image>
-					// to check what are the platforms supported.
-					// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-					//Affinity: &corev1.Affinity{
-					//	NodeAffinity: &corev1.NodeAffinity{
-					//		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					//			NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					//				{
-					//					MatchExpressions: []corev1.NodeSelectorRequirement{
-					//						{
-					//							Key:      "kubernetes.io/arch",
-					//							Operator: "In",
-					//							Values:   []string{"amd64", "arm64", "ppc64le", "s390x"},
-					//						},
-					//						{
-					//							Key:      "kubernetes.io/os",
-					//							Operator: "In",
-					//							Values:   []string{"linux"},
-					//						},
-					//					},
-					//				},
-					//			},
-					//		},
-					//	},
-					//},
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
-						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
-						// If you are looking for to produce solutions to be supported
-						// on lower versions you must remove this option.
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
+					// SecurityContext: &corev1.PodSecurityContext{
+					// 	RunAsNonRoot: &[]bool{true}[0],
+					// 	// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
+					// 	// If you are looking for to produce solutions to be supported
+					// 	// on lower versions you must remove this option.
+					// 	SeccompProfile: &corev1.SeccompProfile{
+					// 		Type: corev1.SeccompProfileTypeRuntimeDefault,
+					// 	},
+					// },
 					Containers: []corev1.Container{{
 						Image:           image,
 						Name:            "recipe",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
-						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{true}[0],
-							AllowPrivilegeEscalation: &[]bool{false}[0],
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{
-									"ALL",
-								},
-							},
-						},
+						// SecurityContext: &corev1.SecurityContext{
+						// 	RunAsNonRoot:             &[]bool{true}[0],
+						// 	AllowPrivilegeEscalation: &[]bool{false}[0],
+						// 	Capabilities: &corev1.Capabilities{
+						// 		Drop: []corev1.Capability{
+						// 			"ALL",
+						// 		},
+						// 	},
+						// },
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: recipe.Spec.ContainerPort,
 							Name:          "recipe",
@@ -306,12 +278,12 @@ func (r *RecipeReconciler) deploymentForRecipe(
 		},
 	}
 
-	// Set the ownerRef for the Deployment
+	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(recipe, dep, r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(recipe, sts, r.Scheme); err != nil {
 		return nil, err
 	}
-	return dep, nil
+	return sts, nil
 }
 
 // labelsForRecipe returns the labels for selecting the resources
@@ -342,11 +314,11 @@ func imageForRecipe() (string, error) {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-// Note that the Deployment will be also watched in order to ensure its
+// Note that the StatefulSet will be also watched in order to ensure its
 // desirable state on the cluster
 func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devconfczv1alpha1.Recipe{}).
-		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }
