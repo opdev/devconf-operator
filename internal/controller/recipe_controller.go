@@ -27,9 +27,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -122,6 +124,86 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if isRecipeMarkedToBeDeleted {
 		log.Info("Ignoring Recipe being deleted")
 		return ctrl.Result{}, nil
+	}
+
+	// Ensure child resources are present
+
+	// Check if the Service already exists, if not create a new one
+	err = r.Get(ctx, types.NamespacedName{Name: recipe.Name, Namespace: recipe.Namespace}, &corev1.Service{})
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new service
+		svc, err := r.serviceForRecipe(recipe)
+		if err != nil {
+			log.Error(err, "Failed to define new Service resource for Recipe")
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&recipe.Status.Conditions, metav1.Condition{Type: typeAvailableRecipe,
+				Status: metav1.ConditionFalse, Reason: "Reconciling",
+				Message: fmt.Sprintf("Failed to create Service for the custom resource (%s): (%s)", recipe.Name, err)})
+
+			if err := r.Status().Update(ctx, recipe); err != nil {
+				log.Error(err, "Failed to update Recipe status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Creating a new Service",
+			"Service.Namespace", svc.Namespace, "Service.Name", svc.Name)
+		if err = r.Create(ctx, svc); err != nil {
+			log.Error(err, "Failed to create new Service",
+				"Service.Namespace", svc.Namespace, "Service.Name", svc.Name)
+			return ctrl.Result{}, err
+		}
+
+		// Service created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Service")
+		// Let's return the error for the reconciliation be re-trigged again
+		return ctrl.Result{}, err
+	}
+
+	// Check if the PVC already exists, if not create a new one
+	err = r.Get(ctx, types.NamespacedName{Name: recipe.Name, Namespace: recipe.Namespace}, &corev1.PersistentVolumeClaim{})
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new pvc
+		pvc, err := r.pvcForRecipe(recipe)
+		if err != nil {
+			log.Error(err, "Failed to define new PVC resource for Recipe")
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&recipe.Status.Conditions, metav1.Condition{Type: typeAvailableRecipe,
+				Status: metav1.ConditionFalse, Reason: "Reconciling",
+				Message: fmt.Sprintf("Failed to create PVC for the custom resource (%s): (%s)", recipe.Name, err)})
+
+			if err := r.Status().Update(ctx, recipe); err != nil {
+				log.Error(err, "Failed to update Recipe status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Creating a new PVC",
+			"PVC.Namespace", pvc.Namespace, "PVC.Name", pvc.Name)
+		if err = r.Create(ctx, pvc); err != nil {
+			log.Error(err, "Failed to create new PVC",
+				"PVC.Namespace", pvc.Namespace, "PVC.Name", pvc.Name)
+			return ctrl.Result{}, err
+		}
+
+		// PVC created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get PVC")
+		// Let's return the error for the reconciliation be re-trigged again
+		return ctrl.Result{}, err
 	}
 
 	// Check if the statefulset already exists, if not create a new one
@@ -272,6 +354,22 @@ func (r *RecipeReconciler) statefulsetForRecipe(
 							ContainerPort: recipe.Spec.ContainerPort,
 							Name:          "recipe",
 						}},
+						Env: []corev1.EnvVar{{
+							Name:  "DATABASE_PATH",
+							Value: "/database/recipes.db",
+						}},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "recipe-db-storage",
+							MountPath: "/database",
+						}},
+					}},
+					Volumes: []corev1.Volume{{
+						Name: "recipe-db-storage",
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: recipe.Name,
+							},
+						},
 					}},
 				},
 			},
@@ -284,6 +382,62 @@ func (r *RecipeReconciler) statefulsetForRecipe(
 		return nil, err
 	}
 	return sts, nil
+}
+
+// serviceForRecipe returns a Recipe Service object
+func (r *RecipeReconciler) serviceForRecipe(
+	recipe *devconfczv1alpha1.Recipe) (*corev1.Service, error) {
+	ls := labelsForRecipe(recipe.Name)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      recipe.Name,
+			Namespace: recipe.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Name:       "http",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       recipe.Spec.ContainerPort,
+				TargetPort: intstr.FromInt32(recipe.Spec.ContainerPort),
+			}},
+			Selector: ls,
+		},
+	}
+
+	// Set the ownerRef for the Service
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
+	if err := ctrl.SetControllerReference(recipe, svc, r.Scheme); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+// pvcForRecipe returns a Recipe Service object
+func (r *RecipeReconciler) pvcForRecipe(
+	recipe *devconfczv1alpha1.Recipe) (*corev1.PersistentVolumeClaim, error) {
+
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      recipe.Name,
+			Namespace: recipe.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					"storage": *resource.NewQuantity(1*1024*1024*1024, resource.BinarySI),
+				},
+			},
+		},
+	}
+
+	// Set the ownerRef for the PVC
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
+	if err := ctrl.SetControllerReference(recipe, pvc, r.Scheme); err != nil {
+		return nil, err
+	}
+	return pvc, nil
 }
 
 // labelsForRecipe returns the labels for selecting the resources
