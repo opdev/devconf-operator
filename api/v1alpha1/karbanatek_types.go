@@ -28,8 +28,14 @@ type KarbanatekSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Karbanatek. Edit karbanatek_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ConfigFile is the path to the configuration file
+	ConfigFile string `json:"configfile,omitempty"`
+
+	// Version is the version of the container image to run
+	Version string `json:"version,omitempty"`
+
+	// Replicas is the number of replicas to run
+	Count int32 `json:"count,omitempty"`
 }
 
 // KarbanatekStatus defines the observed state of Karbanatek

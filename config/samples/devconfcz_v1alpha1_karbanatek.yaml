@@ -9,4 +9,6 @@ metadata:
     app.kubernetes.io/created-by: devconf-operator
   name: karbanatek-sample
 spec:
-  # TODO(user): Add fields here
+  configfile: "config.yaml"
+  version: "v1.0.0"
+  count: 1
