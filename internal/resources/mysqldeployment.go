@@ -10,28 +10,26 @@ import (
 	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 )
 
-func DeploymentForRecipeApp(karbanatek *devconfczv1alpha1.Karbanatek, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+func MysqlDeploymentForKarbanatek(karbanatek *devconfczv1alpha1.Karbanatek, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 
 	replicas := karbanatek.Spec.Count
-	version := karbanatek.Spec.Version
-	image := "quay.io/rocrisp/recipe:" + version
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      karbanatek.Name,
+			Name:      "mysql-deployment",
 			Namespace: karbanatek.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "recipe-app",
+					"app": "mysql",
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "recipe-app",
+						"app": "mysql",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -42,63 +40,40 @@ func DeploymentForRecipeApp(karbanatek *devconfczv1alpha1.Karbanatek, scheme *ru
 						},
 					},
 					Containers: []corev1.Container{{
-						Image:           image,
-						Name:            "recipe-app",
+						Image:           "image-registry.openshift-image-registry.svc:5000/openshift/mysql@sha256:8e9a6595ac9aec17c62933d3b5ecc78df8174a6c2ff74c7f602235b9aef0a340",
+						Name:            "mysql",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Ports: []corev1.ContainerPort{
 							{
-								ContainerPort: 5000,
-								Name:          "http",
+								ContainerPort: 3306,
 							},
 						},
 						Env: []corev1.EnvVar{
 							{
-								Name: "DB_HOST",
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
-										},
-										Key: "DB_HOST",
-									},
-								},
+								Name:  "MYSQL_ROOT_PASSWORD",
+								Value: "rootpassword",
 							},
 							{
-								Name: "DB_PORT",
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
-										},
-										Key: "DB_PORT",
-									},
-								},
+								Name:  "MYSQL_DATABASE",
+								Value: "recipes",
 							},
 							{
-								Name: "DB_NAME",
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
-										},
-										Key: "MYSQL_DATABASE",
-									},
-								},
+								Name:  "MYSQL_PASSWORD",
+								Value: "recipepassword",
 							},
 							{
-								Name:  "DB_USER",
+								Name:  "MYSQL_USER",
 								Value: "recipeuser",
 							},
+						},
+						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name: "DB_PASSWORD",
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
-										},
-										Key: "MYSQL_PASSWORD",
-									},
-								},
+								Name:      "mysql-persistent-storage",
+								MountPath: "/var/lib/mysql",
+							},
+							{
+								Name:      "mysql-initdb",
+								MountPath: "/docker-entrypoint-initdb.d",
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
@@ -116,6 +91,25 @@ func DeploymentForRecipeApp(karbanatek *devconfczv1alpha1.Karbanatek, scheme *ru
 							},
 						},
 					}},
+					Volumes: []corev1.Volume{
+						{
+							Name: "mysql-persistent-storage",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "mysql",
+								},
+							},
+						},
+						{Name: "mysql-initdb",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "mysql-initdb-config",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

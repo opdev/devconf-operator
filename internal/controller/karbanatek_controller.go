@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
-	resources "github.com/opdev/devconf-operator/resources"
+	resources "github.com/opdev/devconf-operator/internal/resources"
 )
 
 // KarbanatekReconciler reconciles a Karbanatek object
@@ -69,47 +68,210 @@ func (r *KarbanatekReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to get karbanatek")
 		return ctrl.Result{}, err
 	}
-	// Define a new Deployment object
-	dep, err := resources.DeploymentForKarbanatek(karbanatek)
+	// Define a new ConfigMap object for initdbconfigmap mysql database
+	mysqlInitDBConfigMap, err := resources.MySQLInitDBConfigMapForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// Check if the InitDB ConfigMap already exists
+	foundMysqlInitDBConfigMap := &corev1.ConfigMap{}
+	err = r.Get(ctx, client.ObjectKey{Name: mysqlInitDBConfigMap.Name, Namespace: mysqlInitDBConfigMap.Namespace}, foundMysqlInitDBConfigMap)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new ConfigMap for mysql database initialization")
+		err = r.Create(ctx, mysqlInitDBConfigMap)
+		if err != nil {
+			log.Error(err, "Failed to create new ConfigMap for mysql database initialization", "ConfigMap.Namespace", mysqlInitDBConfigMap.Namespace, "ConfigMap.Name", mysqlInitDBConfigMap.Name)
+			return ctrl.Result{}, err
+		}
+		// ConfigMap created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get ConfigMap for mysql database initialization")
+		return ctrl.Result{}, err
+	}
+
+	// Define a new ConfigMap object for mysql database
+	mysqlConfigMap, err := resources.MySQLConfigMapForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// Check if the ConfigMap already exists
+	foundMySQLConfigMap := &corev1.ConfigMap{}
+	err = r.Get(ctx, client.ObjectKey{Name: mysqlConfigMap.Name, Namespace: mysqlConfigMap.Namespace}, foundMySQLConfigMap)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new MySQL ConfigMap", "ConfigMap.Namespace", mysqlConfigMap.Namespace, "ConfigMap.Name", mysqlConfigMap.Name)
+		err = r.Create(ctx, mysqlConfigMap)
+		if err != nil {
+			log.Error(err, "Failed to create new MySQL ConfigMap", "ConfigMap.Namespace", mysqlConfigMap.Namespace, "ConfigMap.Name", mysqlConfigMap.Name)
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
+		log.Error(err, "Failed to get MySQL ConfigMap")
+		return ctrl.Result{}, err
+	}
+
+	// Define a new service object for recipe application
+	service, err := resources.RecipeServiceForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to define new service resource for recipe application")
+		return ctrl.Result{}, err
+	}
+	// Check if the service already exists
+	foundService := &corev1.Service{}
+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new service for recipe application")
+		err = r.Create(ctx, service)
+		if err != nil {
+			log.Error(err, "Failed to create new service for recipe application", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+			return ctrl.Result{}, err
+		}
+		// Service created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get service")
+		return ctrl.Result{}, err
+	}
+
+	// Define a new service object for mysql database
+	service, err = resources.MySQLServiceForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to define new service resource for mysql database")
+		return ctrl.Result{}, err
+	}
+	// Check if the service already exists
+	foundService = &corev1.Service{}
+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new service resource for mysql database")
+		err = r.Create(ctx, service)
+		if err != nil {
+			log.Error(err, "Failed to create new service for mysql database", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+			return ctrl.Result{}, err
+		}
+		// Service created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get service for mysql database")
+		return ctrl.Result{}, err
+	}
+
+	// Define a new persistent volume claim object
+	pvc, err := resources.PersistentVolumeClaimForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to define PVC for Karbanatek")
+		return ctrl.Result{}, err
+	}
+	// Check if the PVC already exists
+	foundPVC := &corev1.PersistentVolumeClaim{}
+	err = r.Get(ctx, client.ObjectKey{Name: pvc.Name, Namespace: pvc.Namespace}, foundPVC)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new PVC")
+		err = r.Create(ctx, pvc)
+		if err != nil {
+			log.Error(err, "Failed to create new PVC", "PVC.Namespace", pvc.Namespace, "PVC.Name", pvc.Name)
+			return ctrl.Result{}, err
+		}
+		// PVC created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get PVC")
+		return ctrl.Result{}, err
+	}
+
+	// Define a new mysql database Deployment object
+	dep, err := resources.MysqlDeploymentForKarbanatek(karbanatek, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to define new mysql deployment resource for Karbanatek")
+		return ctrl.Result{}, err
+	}
+
+	// Check if the Mysql database Deployment already exists
+	found := &appsv1.Deployment{}
+	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
+	if err != nil && apierrors.IsNotFound(err) {
+
+		log.Info("Creating a new mysql database deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		err = r.Create(ctx, dep)
+		if err != nil {
+			log.Error(err, "Failed to create new mysql database deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+
+			// Update status for MySQL Deployment
+			karbanatek.Status.MySQLStatus = "Created"
+			err = r.Status().Update(ctx, karbanatek)
+			if err != nil {
+				log.Error(err, "Failed to update Karbanatek status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+		// Deployment created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get mysql database deployment")
+		return ctrl.Result{}, err
+	}
+	// If the Deployment already exists and the size is the same, then do nothing
+	log.Info("Skip reconcile: mysql database deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+
+	// Define a new recipe app deployment object
+	dep, err = resources.DeploymentForRecipeApp(karbanatek, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define new Deployment resource for Karbanatek")
 		return ctrl.Result{}, err
 	}
 
 	// Check if the Deployment already exists
-	found := &appsv1.Deployment{}
+	found = &appsv1.Deployment{}
 	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 
-		// Ensure the Deployment size is the same as the spec
-		size := karbanatek.Spec.Count
-		if *found.Spec.Replicas != size {
-			found.Spec.Replicas = &size
-			err = r.Update(ctx, found)
+		log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		err = r.Create(ctx, dep)
+		if err != nil {
+			log.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+
+			// Update status for Recipe App Deployment
+			karbanatek.Status.RecipeAppStatus = "Created"
+			err = r.Status().Update(ctx, karbanatek)
 			if err != nil {
-				log.Error(err, "Failed to update Deployment", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+				log.Error(err, "Failed to update Karbanatek status")
 				return ctrl.Result{}, err
 			}
-			// Spec updated - return and requeue
-			return ctrl.Result{Requeue: true}, nil
+
+			return ctrl.Result{}, err
 		}
+		// Deployment created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
 		log.Error(err, "Failed to get Deployment")
 		return ctrl.Result{}, err
+	} else if *found.Spec.Replicas != karbanatek.Spec.Count {
+		// Update the Recipe deployment if the number of replicas does not match the desired state
+		log.Info("Updating Recipe Deployment replicas", "Current", *found.Spec.Replicas, "Desired", karbanatek.Spec.Count)
+		found.Spec.Replicas = &karbanatek.Spec.Count
+		err = r.Update(ctx, found)
+		if err != nil {
+			log.Error(err, "Failed to update Recipe Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+			return ctrl.Result{}, err
+		}
 	}
+
+	// Update status for MySQL Deployment
+	karbanatek.Status.MySQLStatus = "Created"
+	// Update status for Recipe App Deployment
+	karbanatek.Status.RecipeAppStatus = "Created"
+	err = r.Status().Update(ctx, karbanatek)
+	if err != nil {
+		log.Error(err, "Failed to update Karbanatek status")
+		return ctrl.Result{}, err
+	}
+
 	// If the Deployment already exists and the size is the same, then do nothing
 	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
 	return ctrl.Result{}, nil
-}
-
-// getPodNames returns the pod names of the array of pods passed in
-func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
-	}
-	return podNames
 }
 
 // SetupWithManager sets up the controller with the Manager.

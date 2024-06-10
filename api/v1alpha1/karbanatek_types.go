@@ -28,10 +28,7 @@ type KarbanatekSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// ConfigFile is the path to the configuration file
-	ConfigFile string `json:"configfile,omitempty"`
-
-	// Version is the version of the container image to run
+	// Version is the version of the recipe app image to run
 	Version string `json:"version,omitempty"`
 
 	// Replicas is the number of replicas to run
@@ -40,8 +37,8 @@ type KarbanatekSpec struct {
 
 // KarbanatekStatus defines the observed state of Karbanatek
 type KarbanatekStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	MySQLStatus     string `json:"mysqlStatus,omitempty"`
+	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
