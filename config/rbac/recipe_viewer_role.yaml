@@ -1,0 +1,27 @@
+# permissions for end users to view recipes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: recipe-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: devconf-operator
+    app.kubernetes.io/part-of: devconf-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: recipe-viewer-role
+rules:
+  - apiGroups:
+      - devconfcz.opdev.com
+    resources:
+      - recipes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - devconfcz.opdev.com
+    resources:
+      - recipes/status
+    verbs:
+      - get

@@ -1,23 +1,22 @@
 package resources
 
 import (
+	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 )
 
-func MysqlDeploymentForKarbanatek(karbanatek *devconfczv1alpha1.Karbanatek, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 
-	replicas := karbanatek.Spec.Count
+	replicas := recipe.Spec.Count
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mysql-deployment",
-			Namespace: karbanatek.Namespace,
+			Namespace: recipe.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -115,7 +114,7 @@ func MysqlDeploymentForKarbanatek(karbanatek *devconfczv1alpha1.Karbanatek, sche
 		},
 	}
 	// Set the ownerRef for the Deployment
-	if err := ctrl.SetControllerReference(karbanatek, dep, scheme); err != nil {
+	if err := ctrl.SetControllerReference(recipe, dep, scheme); err != nil {
 		return nil, err
 	}
 	return dep, nil

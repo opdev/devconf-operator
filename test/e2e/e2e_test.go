@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rocrisp/devconf-operator/test/utils"
+	"github.com/opdev/devconf-operator/test/utils"
 )
 
 const namespace = "devconf-operator-system"

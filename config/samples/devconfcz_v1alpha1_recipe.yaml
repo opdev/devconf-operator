@@ -1,0 +1,7 @@
+apiVersion: devconfcz.opdev.com/v1alpha1
+kind: Recipe
+metadata:
+  name: recipe-sample
+spec:
+  version: "probe"
+  count: 2

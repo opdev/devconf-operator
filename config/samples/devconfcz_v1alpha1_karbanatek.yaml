@@ -1,7 +1,0 @@
-apiVersion: devconfcz.opdev.com/v1alpha1
-kind: Karbanatek
-metadata:
-  name: karbanatek-sample
-spec:
-  version: "v13"
-  count: 3

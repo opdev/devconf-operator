@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks
+  - recipes
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks/finalizers
+  - recipes/finalizers
   verbs:
   - update
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks/status
+  - recipes/status
   verbs:
   - get
   - patch

@@ -1,25 +1,24 @@
 package resources
 
 import (
+	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 )
 
-func DeploymentForRecipeApp(karbanatek *devconfczv1alpha1.Karbanatek, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 
-	replicas := karbanatek.Spec.Count
-	version := karbanatek.Spec.Version
+	replicas := recipe.Spec.Count
+	version := recipe.Spec.Version
 	image := "quay.io/rocrisp/recipe:" + version
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      karbanatek.Name,
-			Namespace: karbanatek.Namespace,
+			Name:      recipe.Name,
+			Namespace: recipe.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -121,7 +120,7 @@ func DeploymentForRecipeApp(karbanatek *devconfczv1alpha1.Karbanatek, scheme *ru
 		},
 	}
 	// Set the ownerRef for the Deployment
-	if err := ctrl.SetControllerReference(karbanatek, dep, scheme); err != nil {
+	if err := ctrl.SetControllerReference(recipe, dep, scheme); err != nil {
 		return nil, err
 	}
 	return dep, nil

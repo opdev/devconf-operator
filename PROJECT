@@ -6,6 +6,15 @@ domain: opdev.com
 layout:
 - go.kubebuilder.io/v4
 plugins:
+  deploy-image.go.kubebuilder.io/v1-alpha:
+    resources:
+    - domain: opdev.com
+      group: devconfcz
+      kind: Recipe
+      options:
+        containerPort: "5000"
+        image: quay.io/rocrisp/recipe:v5
+      version: v1alpha1
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: devconf-operator
@@ -17,7 +26,7 @@ resources:
   controller: true
   domain: opdev.com
   group: devconfcz
-  kind: Karbanatek
+  kind: Recipe
   path: github.com/opdev/devconf-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

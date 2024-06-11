@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: karbanateks.devconfcz.opdev.com
+  name: recipes.devconfcz.opdev.com
 spec:
   group: devconfcz.opdev.com
   names:
-    kind: Karbanatek
-    listKind: KarbanatekList
-    plural: karbanateks
-    singular: karbanatek
+    kind: Recipe
+    listKind: RecipeList
+    plural: recipes
+    singular: recipe
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Karbanatek is the Schema for the karbanateks API
+        description: recipe is the Schema for the recipes API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +32,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: KarbanatekSpec defines the desired state of Karbanatek
+            description: recipeSpec defines the desired state of recipe
             properties:
               count:
                 description: Replicas is the number of replicas to run
@@ -43,7 +43,7 @@ spec:
                 type: string
             type: object
           status:
-            description: KarbanatekStatus defines the observed state of Karbanatek
+            description: RecipeStatus defines the observed state of recipe
             properties:
               mysqlStatus:
                 type: string

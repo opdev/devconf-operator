@@ -25,12 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Karbanatek Controller", func() {
+var _ = Describe("recipe Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +39,13 @@ var _ = Describe("Karbanatek Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		karbanatek := &devconfczv1alpha1.Karbanatek{}
+		recipe := &devconfczv1alpha1.Recipe{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Karbanatek")
-			err := k8sClient.Get(ctx, typeNamespacedName, karbanatek)
+			By("creating the custom resource for the Kind recipe")
+			err := k8sClient.Get(ctx, typeNamespacedName, recipe)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &devconfczv1alpha1.Karbanatek{
+				resource := &devconfczv1alpha1.Recipe{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +58,16 @@ var _ = Describe("Karbanatek Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &devconfczv1alpha1.Karbanatek{}
+			resource := &devconfczv1alpha1.Recipe{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance Karbanatek")
+			By("Cleanup the specific resource instance recipe")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &KarbanatekReconciler{
+			controllerReconciler := &RecipeReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

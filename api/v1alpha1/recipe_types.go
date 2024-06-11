@@ -23,8 +23,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// KarbanatekSpec defines the desired state of Karbanatek
-type KarbanatekSpec struct {
+// recipeSpec defines the desired state of recipe
+type RecipeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -35,8 +35,8 @@ type KarbanatekSpec struct {
 	Count int32 `json:"count,omitempty"`
 }
 
-// KarbanatekStatus defines the observed state of Karbanatek
-type KarbanatekStatus struct {
+// RecipeStatus defines the observed state of recipe
+type RecipeStatus struct {
 	MySQLStatus     string `json:"mysqlStatus,omitempty"`
 	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
 }
@@ -44,24 +44,24 @@ type KarbanatekStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Karbanatek is the Schema for the karbanateks API
-type Karbanatek struct {
+// recipe is the Schema for the recipes API
+type Recipe struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KarbanatekSpec   `json:"spec,omitempty"`
-	Status KarbanatekStatus `json:"status,omitempty"`
+	Spec   RecipeSpec   `json:"spec,omitempty"`
+	Status RecipeStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// KarbanatekList contains a list of Karbanatek
-type KarbanatekList struct {
+// RecipeList contains a list of recipe
+type RecipeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Karbanatek `json:"items"`
+	Items           []Recipe `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Karbanatek{}, &KarbanatekList{})
+	SchemeBuilder.Register(&Recipe{}, &RecipeList{})
 }
