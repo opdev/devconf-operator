@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-  - devconfcz_v1alpha1_recipe.yaml
+- devconfcz_v1alpha1_recipe.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

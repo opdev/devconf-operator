@@ -11,21 +11,21 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: recipe-editor-role
 rules:
-  - apiGroups:
-      - devconfcz.opdev.com
-    resources:
-      - recipes
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - devconfcz.opdev.com
-    resources:
-      - recipes/status
-    verbs:
-      - get
+- apiGroups:
+  - devconfcz.opdev.com
+  resources:
+  - recipes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - devconfcz.opdev.com
+  resources:
+  - recipes/status
+  verbs:
+  - get
