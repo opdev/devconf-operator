@@ -72,6 +72,9 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+        - name: RECIPE_IMAGE
+          value: quay.io/rocrisp/recipe:v5
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

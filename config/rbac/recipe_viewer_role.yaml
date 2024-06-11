@@ -1,20 +1,20 @@
-# permissions for end users to view karbanateks.
+# permissions for end users to view recipes.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: karbanatek-viewer-role
+    app.kubernetes.io/instance: recipe-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: devconf-operator
     app.kubernetes.io/part-of: devconf-operator
     app.kubernetes.io/managed-by: kustomize
-  name: karbanatek-viewer-role
+  name: recipe-viewer-role
 rules:
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks
+  - recipes
   verbs:
   - get
   - list
@@ -22,6 +22,6 @@ rules:
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks/status
+  - recipes/status
   verbs:
   - get

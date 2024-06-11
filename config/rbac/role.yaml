@@ -5,9 +5,36 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks
+  - recipes
   verbs:
   - create
   - delete
@@ -19,13 +46,13 @@ rules:
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks/finalizers
+  - recipes/finalizers
   verbs:
   - update
 - apiGroups:
   - devconfcz.opdev.com
   resources:
-  - karbanateks/status
+  - recipes/status
   verbs:
   - get
   - patch
