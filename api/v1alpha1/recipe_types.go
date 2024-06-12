@@ -23,7 +23,7 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// recipeSpec defines the desired state of recipe
+// RecipeSpec defines the desired state of Recipe
 type RecipeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -35,7 +35,7 @@ type RecipeSpec struct {
 	Count int32 `json:"count,omitempty"`
 }
 
-// RecipeStatus defines the observed state of recipe
+// RecipeStatus defines the observed state of Recipe
 type RecipeStatus struct {
 	MySQLStatus     string `json:"mysqlStatus,omitempty"`
 	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
@@ -44,7 +44,7 @@ type RecipeStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// recipe is the Schema for the recipes API
+// Recipe is the Schema for the recipes API
 type Recipe struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -55,7 +55,7 @@ type Recipe struct {
 
 //+kubebuilder:object:root=true
 
-// RecipeList contains a list of recipe
+// RecipeList contains a list of Recipe
 type RecipeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
