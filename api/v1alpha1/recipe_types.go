@@ -23,41 +23,28 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// RecipeSpec defines the desired state of Recipe
+// recipeSpec defines the desired state of recipe
 type RecipeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Size defines the number of Recipe instances
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=3
-	// +kubebuilder:validation:ExclusiveMaximum=false
-	Size int32 `json:"size,omitempty"`
+	// Version is the version of the recipe app image to run
+	Version string `json:"version,omitempty"`
 
-	// Port defines the port that will be used to init the container with the image
-	ContainerPort int32 `json:"containerPort,omitempty"`
+	// Replicas is the number of replicas to run
+	Count int32 `json:"count,omitempty"`
 }
 
-// RecipeStatus defines the observed state of Recipe
+// RecipeStatus defines the observed state of recipe
 type RecipeStatus struct {
-	// Represents the observations of a Recipe's current state.
-	// Recipe.status.conditions.type are: "Available", "Progressing", and "Degraded"
-	// Recipe.status.conditions.status are one of True, False, Unknown.
-	// Recipe.status.conditions.reason the value should be a CamelCase string and producers of specific
-	// condition types may define expected values and meanings for this field, and whether the values
-	// are considered a guaranteed API.
-	// Recipe.status.conditions.Message is a human readable message indicating details about the transition.
-	// For further information see: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	MySQLStatus     string `json:"mysqlStatus,omitempty"`
+	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Recipe is the Schema for the recipes API
+// recipe is the Schema for the recipes API
 type Recipe struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -68,7 +55,7 @@ type Recipe struct {
 
 //+kubebuilder:object:root=true
 
-// RecipeList contains a list of Recipe
+// RecipeList contains a list of recipe
 type RecipeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
