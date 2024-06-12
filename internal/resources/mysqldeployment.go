@@ -11,8 +11,7 @@ import (
 
 func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 
-	replicas := recipe.Spec.Count
-
+	replicas := int32(1)
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mysql-deployment",

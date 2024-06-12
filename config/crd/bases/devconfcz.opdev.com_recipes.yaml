@@ -37,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: recipeSpec defines the desired state of recipe
+            description: RecipeSpec defines the desired state of Recipe
             properties:
               count:
                 description: Replicas is the number of replicas to run
@@ -48,7 +48,7 @@ spec:
                 type: string
             type: object
           status:
-            description: RecipeStatus defines the observed state of recipe
+            description: RecipeStatus defines the observed state of Recipe
             properties:
               mysqlStatus:
                 type: string

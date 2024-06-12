@@ -40,6 +40,10 @@ type RecipeReconciler struct {
 //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=*
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors;prometheusrule,verbs=*
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps;endpoints;events;persistentvolumeclaims;pods;namespaces;secrets;serviceaccounts;services;services/finalizers,verbs=*
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
