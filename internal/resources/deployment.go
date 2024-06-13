@@ -11,7 +11,7 @@ import (
 
 func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 
-	replicas := recipe.Spec.Count
+	replicas := recipe.Spec.Replicas
 	version := recipe.Spec.Version
 	image := "quay.io/opdev/recipe_app:" + version
 
