@@ -32,7 +32,10 @@ If you wish to follow this tutorial on your own, you'll need to:
 - [Install Go](https://go.dev/doc/install)
 - [Install operator-sdk](https://sdk.operatorframework.io/docs/installation/)
 - Have access to an OpenShift cluster ([OpenShit Local](https://developers.redhat.com/products/openshift-local/overview) formerly CRC might be a good starting point) or Kubernetes cluster, (refer to [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/) or [Minikube](https://minikube.sigs.k8s.io/docs/start/) for a local Kubernetes cluster installations).
-
+- As part of metrics scraping we should install Prometheus in our Cluster. If you are using Kind, please apply the following command:
+  ```bash
+  helm install prometheus prometheus-community/kube-prometheus-stack --namespace prometheus --create-namespace
+  ```
 If you attend the Workshop in presence at DevConf.CZ, you'll be provided with access to a lab that has all pre-requisites provisioned and access to a Single Node Openshift lab.
 
 # Resources
