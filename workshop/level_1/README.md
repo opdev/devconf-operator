@@ -25,7 +25,7 @@ $ make manifests
 
 We're going to have to create the following child resources:
 * For the frontend:
-  * A StatefulSet
+  * A Deployment
   * A Service
 * For the MySQL database:
   * A Deployment

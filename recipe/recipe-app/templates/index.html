@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <title>Recipe List</title>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>DevConf CZ Culinary Creations</h1>
+        <a href="{{ url_for('add_recipe') }}" class="btn btn-primary mb-3">Add Recipe</a>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Recipe Name</th>
+                    <th>Elements</th>
+                    <th>Creation</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recipes %}
+                <tr>
+                    <td>{{ recipe.title }}</td>
+                    <td>{{ recipe.ingredients }}</td>
+                    <td>{{ recipe.instructions }}</td>
+                    <td>
+                        <a href="{{ url_for('get_recipe_by_id', recipe_id=recipe.id) }}" class="btn btn-secondary">Edit</a>
+                        <a href="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

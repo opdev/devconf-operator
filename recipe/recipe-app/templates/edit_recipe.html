@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <title>Edit Recipe</title>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Edit Recipe</h1>
+        <form method="POST" action="{{ url_for('get_recipe_by_id', recipe_id=recipe.id) }}">
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ recipe.title }}" required>
+            </div>
+            <div class="form-group">
+                <label for="ingredients">Ingredients</label>
+                <textarea class="form-control" id="ingredients" name="ingredients" required>{{ recipe.ingredients }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="instructions">Instructions</label>
+                <textarea class="form-control" id="instructions" name="instructions" required>{{ recipe.instructions }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary mb-3">Save</button>
+        </form>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</body>
+</html>
