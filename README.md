@@ -38,4 +38,4 @@ If you attend the Workshop in presence at DevConf.CZ, you'll be provided with ac
 # Resources
 
 - [Operator Capability Level](https://sdk.operatorframework.io/docs/overview/operator-capabilities/)
-- [Recipe application source code](https://github.com/rocrisp/recipe)
+- [Recipe application source code](https://github.com/opdev/devconf-operator/recipe)
