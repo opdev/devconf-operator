@@ -39,6 +39,22 @@ spec:
           spec:
             description: RecipeSpec defines the desired state of Recipe
             properties:
+              backupPolicy:
+                properties:
+                  backupPVC:
+                    description: 'Assume it exists - possible improvement: create
+                      if not exist'
+                    type: string
+                  enabled:
+                    description: TODO Default to False
+                    type: boolean
+                  frequency:
+                    description: |-
+                      In minutes
+                      TODO: validators: min 1 / max 60
+                    format: int32
+                    type: integer
+                type: object
               count:
                 description: Replicas is the number of replicas to run
                 format: int32

@@ -33,6 +33,24 @@ type RecipeSpec struct {
 
 	// Replicas is the number of replicas to run
 	Count int32 `json:"count,omitempty"`
+
+	//
+	BackupPolicy RecipeBackupPolicy `json:"backupPolicy,omitempty"`
+
+	// SourceMySQLVolume
+}
+
+//
+type RecipeBackupPolicy struct {
+	// TODO Default to False
+	Enabled bool `json:"enabled,omitempty"`
+
+	// In minutes
+	// TODO: validators: min 1 / max 60
+	Interval int32 `json:"frequency,omitempty"`
+
+	// Assume it exists - possible improvement: create if not exist
+	BackupPVC string `json:"backupPVC,omitempty"`
 }
 
 // RecipeStatus defines the observed state of Recipe

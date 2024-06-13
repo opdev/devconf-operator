@@ -265,6 +265,32 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
+	// Create a CronJob for backing up the MySQL Database, is BackupPlicy is enabled
+	if recipe.Spec.BackupPlicy.enabled {
+		// Define a new CronJob object
+		cj, err := resources.CronJobForBackups(recipe, r.Scheme)
+		if err != nil {
+			log.Error(err, "Failed to define CronJob for recipe")
+			return ctrl.Result{}, err
+		}
+		// Check if the CronJob already exists
+		foundCronJob := &corev1.PersistentVolumeClaim{}
+		err = r.Get(ctx, client.ObjectKey{Name: cj.Name, Namespace: cj.Namespace}, foundCronJob)
+		if err != nil && apierrors.IsNotFound(err) {
+			log.Info("Creating a new CronJob")
+			err = r.Create(ctx, cj)
+			if err != nil {
+				log.Error(err, "Failed to create new CronJob", "CronJob.Namespace", cj.Namespace, "CronJob.Name", cj.Name)
+				return ctrl.Result{}, err
+			}
+			// CronJob created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get CronJob")
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Update status for MySQL Deployment
 	recipe.Status.MySQLStatus = "Created"
 	// Update status for Recipe App Deployment
