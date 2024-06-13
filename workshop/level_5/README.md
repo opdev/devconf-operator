@@ -1,0 +1,1 @@
+# Level 5: Allow the deployment of the `Recipe` application create a HorizontalPodAutoscaler resource.
