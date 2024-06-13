@@ -13,7 +13,7 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 
 	replicas := recipe.Spec.Count
 	version := recipe.Spec.Version
-	image := "quay.io/rocrisp/recipe:" + version
+	image := "quay.io/opdev/recipe_app:" + version
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

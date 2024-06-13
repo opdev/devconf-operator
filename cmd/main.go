@@ -123,8 +123,8 @@ func main() {
 	}
 
 	if err = (&controller.RecipeReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Recipe")
 		os.Exit(1)
