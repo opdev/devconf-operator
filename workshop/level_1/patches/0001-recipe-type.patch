@@ -1,0 +1,26 @@
+diff --git a/api/v1alpha1/recipe_types.go b/api/v1alpha1/recipe_types.go
+index 265c10b..461959b 100644
+--- a/api/v1alpha1/recipe_types.go
++++ b/api/v1alpha1/recipe_types.go
+@@ -28,14 +28,17 @@ type RecipeSpec struct {
+ 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+ 	// Important: Run "make" to regenerate code after modifying this file
+ 
+-	// Foo is an example field of Recipe. Edit recipe_types.go to remove/update
+-	Foo string `json:"foo,omitempty"`
++	// Version is the version of the recipe app image to run
++	Version string `json:"version,omitempty"`
++
++	// Replicas is the number of replicas to run
++	Count int32 `json:"count,omitempty"`
+ }
+ 
+ // RecipeStatus defines the observed state of Recipe
+ type RecipeStatus struct {
+-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+-	// Important: Run "make" to regenerate code after modifying this file
++	MySQLStatus     string `json:"mysqlStatus,omitempty"`
++	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
+ }
+ 
+ //+kubebuilder:object:root=true

@@ -1,0 +1,19 @@
+diff --git a/config/samples/devconfcz_v1alpha1_recipe.yaml b/config/samples/devconfcz_v1alpha1_recipe.yaml
+index 71132b6..4567046 100644
+--- a/config/samples/devconfcz_v1alpha1_recipe.yaml
++++ b/config/samples/devconfcz_v1alpha1_recipe.yaml
+@@ -1,12 +1,7 @@
+ apiVersion: devconfcz.opdev.com/v1alpha1
+ kind: Recipe
+ metadata:
+-  labels:
+-    app.kubernetes.io/name: recipe
+-    app.kubernetes.io/instance: recipe-sample
+-    app.kubernetes.io/part-of: test-workshop1
+-    app.kubernetes.io/managed-by: kustomize
+-    app.kubernetes.io/created-by: test-workshop1
+   name: recipe-sample
+ spec:
+-  # TODO(user): Add fields here
++  version: "v1.0.0"
++  count: 2
