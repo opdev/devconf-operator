@@ -35,3 +35,31 @@ func PersistentVolumeClaimForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *ru
 
 	return pvc, nil
 }
+
+func PersistentVolumeClaimForBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
+	var storageClassName = "nfs"
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
+			Namespace: recipe.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteMany,
+			},
+			StorageClassName: &storageClassName,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
+	}
+
+	// Set owner reference
+	if err := ctrl.SetControllerReference(recipe, pvc, scheme); err != nil {
+		return nil, err
+	}
+
+	return pvc, nil
+}

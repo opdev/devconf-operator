@@ -44,10 +44,26 @@ spec:
                   Database specifies the database configuration to use
                   for the workload.
                 properties:
+                  backupPolicySpec:
+                    description: BackupPolicy
+                    properties:
+                      schedule:
+                        description: Backup Schedule
+                        type: string
+                      timezone:
+                        description: Backup Schedule
+                        type: string
+                      volumeName:
+                        description: VolumeName which should be used at MySQL DB.
+                        type: string
+                    type: object
                   image:
                     description: Image set the image which should be used at MySQL
                       DB.
                     type: string
+                  initRestore:
+                    description: InitRestore
+                    type: boolean
                   podSecurityContext:
                     description: PodSecurityContext in case of Openshift
                     properties:

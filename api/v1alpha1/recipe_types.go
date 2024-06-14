@@ -79,6 +79,24 @@ type DatabaseSpec struct {
 	// SecurityContext in case of Openshift
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+	// BackupPolicy
+	// +optional
+	BackupPolicy BackupPolicySpec `json:"backupPolicySpec,omitempty"`
+	// InitRestore
+	// +optional
+	InitRestore bool `json:"initRestore,omitempty"`
+}
+
+type BackupPolicySpec struct {
+	// Backup Schedule
+	// +optional
+	Schedule string `json:"schedule,omitempty"`
+	// Backup Schedule
+	// +optional
+	Tmz string `json:"timezone,omitempty"`
+	// VolumeName which should be used at MySQL DB.
+	// +optional
+	VolumeName string `json:"volumeName,omitempty"`
 }
 
 // RecipeStatus defines the observed state of Recipe

@@ -22,7 +22,12 @@ spec:
       memory: 64Mi
   database:
     image: mysql:5.7
+    initRestore: true
     securityContext:
       runAsNonRoot: false
     podSecurityContext:
       runAsNonRoot: false
+    backupPolicySpec:
+      volumeName: "-backup"
+      schedule: "*/2 * * * *"
+      timezone: "Europe/Berlin"
