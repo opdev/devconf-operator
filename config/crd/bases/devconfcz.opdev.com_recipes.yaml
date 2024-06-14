@@ -61,6 +61,9 @@ spec:
                     description: Image set the image which should be used at MySQL
                       DB.
                     type: string
+                  initRestore:
+                    description: InitRestore
+                    type: boolean
                   podSecurityContext:
                     description: PodSecurityContext in case of Openshift
                     properties:

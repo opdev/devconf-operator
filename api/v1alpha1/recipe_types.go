@@ -82,6 +82,9 @@ type DatabaseSpec struct {
 	// BackupPolicy
 	// +optional
 	BackupPolicy BackupPolicySpec `json:"backupPolicySpec,omitempty"`
+	// InitRestore
+	// +optional
+	InitRestore bool `json:"initRestore,omitempty"`
 }
 
 type BackupPolicySpec struct {

@@ -19,8 +19,9 @@ func CronJobForMySqlBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sch
 				Namespace: recipe.Namespace,
 			},
 			Spec: batchv1.CronJobSpec{
-				Schedule: recipe.Spec.Database.BackupPolicy.Schedule,
-				TimeZone: &recipe.Spec.Database.BackupPolicy.Tmz,
+				ConcurrencyPolicy: batchv1.ForbidConcurrent,
+				Schedule:          recipe.Spec.Database.BackupPolicy.Schedule,
+				TimeZone:          &recipe.Spec.Database.BackupPolicy.Tmz,
 				JobTemplate: batchv1.JobTemplateSpec{
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
@@ -31,67 +32,72 @@ func CronJobForMySqlBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sch
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Env: []corev1.EnvVar{
 										{
+											Name:  "MAX_BACKUPS",
+											Value: "2",
+										},
+										{
+											Name:  "CRON_TIME",
+											Value: recipe.Spec.Database.BackupPolicy.Schedule,
+										},
+										{
+											Name:  "MYSQLDUMP_OPTS",
+											Value: "--no-tablespaces",
+										},
+										{
 											Name: "MYSQL_HOST",
 											ValueFrom: &corev1.EnvVarSource{
 												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "mysql." + recipe.Namespace + ".svc",
+														Name: recipe.Name + "-mysql-config",
 													},
-													Key: "MYSQL_HOST",
+													Key: "DB_HOST",
 												},
 											},
-										},
-										{
-											Name: "MYSQL_PORT",
+										}, {
+											Name: "MYSQL_USER",
 											ValueFrom: &corev1.EnvVarSource{
 												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "mysql-config",
+														Name: recipe.Name + "-mysql-config",
 													},
-													Key: "MYSQL_PORT",
+													Key: "MYSQL_USER",
 												},
 											},
-										},
-										{
-											Name: "MYSQL_NAME",
-											ValueFrom: &corev1.EnvVarSource{
-												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "mysql-config",
-													},
-													Key: "MYSQL_DATABASE",
-												},
-											},
-										},
-										{
-											Name:  "MYSQL_USER",
-											Value: "recipeuser",
-										},
-										{
+										}, {
 											Name: "MYSQL_PASSWORD",
 											ValueFrom: &corev1.EnvVarSource{
-												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+												SecretKeyRef: &corev1.SecretKeySelector{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "mysql-config",
+														Name: recipe.Name + "-mysql",
 													},
 													Key: "MYSQL_PASSWORD",
+												},
+											},
+										}, {
+											Name: "MYSQL_ROOT_PASSWORD",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: recipe.Name + "-mysql",
+													},
+													Key: "MYSQL_ROOT_PASSWORD",
 												},
 											},
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
-											Name:      "mysql-backup",
+											Name:      recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
 											MountPath: "/backup",
 										},
 									},
 								}},
 								Volumes: []corev1.Volume{
 									{
-										Name: "mysql-backup",
+										Name: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
 										VolumeSource: corev1.VolumeSource{
 											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-												ClaimName: "mysql-backup",
+												ClaimName: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
 											},
 										},
 									},
