@@ -35,6 +35,13 @@ type RecipeSpec struct {
 	// Replicas is the number of replicas to run
 	Replicas int32 `json:"replicas,omitempty"`
 
+	// PodSecurityContext in case of Openshift
+	// +optional
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// SecurityContext in case of Openshift
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
 	// Resources to set for Level 3 and 5.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
