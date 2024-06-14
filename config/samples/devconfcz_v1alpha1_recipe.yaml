@@ -5,6 +5,10 @@ metadata:
 spec:
   version: "v1.0.0"
   replicas: 2
+  securityContext:
+    runAsNonRoot: false
+  podSecurityContext:
+    runAsNonRoot: false
   hpa:
     minReplicas: 1
     maxReplicas: 2
