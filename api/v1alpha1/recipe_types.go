@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,6 +34,10 @@ type RecipeSpec struct {
 
 	// Replicas is the number of replicas to run
 	Replicas int32 `json:"replicas,omitempty"`
+
+	// Resources to set for Level 3 and 5.
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// Hpa specifies the pod autoscaling configuration to use
 	// for the workload.

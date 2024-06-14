@@ -9,3 +9,10 @@ spec:
     minReplicas: 1
     maxReplicas: 2
     targetMemoryUtilization: 60
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi

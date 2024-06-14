@@ -114,6 +114,7 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 								},
 							},
 						},
+						Resources: recipe.Spec.Resources,
 					}},
 				},
 			},
