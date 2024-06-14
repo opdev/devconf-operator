@@ -58,6 +58,7 @@ type HpaSpec struct {
 type RecipeStatus struct {
 	MySQLStatus     string `json:"mysqlStatus,omitempty"`
 	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
+	RecipeAppHpa    string `json:"recipeAppHpa,omitempty"`
 }
 
 //+kubebuilder:object:root=true
