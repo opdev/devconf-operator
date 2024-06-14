@@ -1,0 +1,5 @@
+Flask
+pymysql
+Gunicorn
+cryptography
+psutil
