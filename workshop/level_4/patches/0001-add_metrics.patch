@@ -1,0 +1,129 @@
+diff --git a/config/default/kustomization.yaml b/config/default/kustomization.yaml
+index c113dec..b9b8201 100644
+--- a/config/default/kustomization.yaml
++++ b/config/default/kustomization.yaml
+@@ -24,7 +24,7 @@ resources:
+ # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER'. 'WEBHOOK' components are required.
+ #- ../certmanager
+ # [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
+-#- ../prometheus
++- ../prometheus
+ 
+ patches:
+ # Protect the /metrics endpoint by putting it behind auth.
+diff --git a/config/prometheus/role.yaml b/config/prometheus/role.yaml
+new file mode 100644
+index 0000000..faca20f
+--- /dev/null
++++ b/config/prometheus/role.yaml
+@@ -0,0 +1,18 @@
++apiVersion: rbac.authorization.k8s.io/v1
++kind: ClusterRole
++metadata:
++  name: prometheus-k8s-role
++  namespace: devconf-operator-system
++rules:
++  - apiGroups:
++      - ""
++    resources:
++      - endpoints
++      - pods
++      - services
++      - nodes
++      - secrets
++    verbs:
++      - get
++      - list
++      - watch
+\ No newline at end of file
+diff --git a/config/prometheus/rolebinding.yaml b/config/prometheus/rolebinding.yaml
+new file mode 100644
+index 0000000..8f6eecf
+--- /dev/null
++++ b/config/prometheus/rolebinding.yaml
+@@ -0,0 +1,13 @@
++apiVersion: rbac.authorization.k8s.io/v1
++kind: ClusterRoleBinding
++metadata:
++  name: prometheus-k8s-rolebinding
++  namespace: devconf-operator-system
++roleRef:
++  apiGroup: rbac.authorization.k8s.io
++  kind: ClusterRole
++  name: prometheus-k8s-role
++subjects:
++  - kind: ServiceAccount
++    name: prometheus-k8s
++    namespace: openshift-monitoring
+\ No newline at end of file
+diff --git a/go.mod b/go.mod
+index 658400a..49ae39e 100644
+--- a/go.mod
++++ b/go.mod
+@@ -5,6 +5,7 @@ go 1.20
+ require (
+ 	github.com/onsi/ginkgo/v2 v2.11.0
+ 	github.com/onsi/gomega v1.27.10
++	github.com/prometheus/client_golang v1.16.0
+ 	k8s.io/api v0.28.3
+ 	k8s.io/apimachinery v0.28.3
+ 	k8s.io/client-go v0.28.3
+@@ -41,7 +42,6 @@ require (
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+ 	github.com/pkg/errors v0.9.1 // indirect
+-	github.com/prometheus/client_golang v1.16.0 // indirect
+ 	github.com/prometheus/client_model v0.4.0 // indirect
+ 	github.com/prometheus/common v0.44.0 // indirect
+ 	github.com/prometheus/procfs v0.10.1 // indirect
+diff --git a/internal/controller/metrics.go b/internal/controller/metrics.go
+new file mode 100644
+index 0000000..b8aa839
+--- /dev/null
++++ b/internal/controller/metrics.go
+@@ -0,0 +1,26 @@
++package controller
++
++import (
++	"github.com/prometheus/client_golang/prometheus"
++	"sigs.k8s.io/controller-runtime/pkg/metrics"
++)
++
++var (
++	upgrades = prometheus.NewCounter(
++		prometheus.CounterOpts{
++			Name: "upgrades_total",
++			Help: "Number of upgrades processed",
++		},
++	)
++	upgradesFailures = prometheus.NewCounter(
++		prometheus.CounterOpts{
++			Name: "upgrades_failures_total",
++			Help: "Number of failed upgrades",
++		},
++	)
++
++)
++func init() {
++	// Register custom metrics with the global prometheus registry
++	metrics.Registry.MustRegister(upgrades, upgradesFailures)
++}
+diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
+index ebab561..20aa3fc 100644
+--- a/internal/controller/recipe_controller.go
++++ b/internal/controller/recipe_controller.go
+@@ -281,9 +281,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+ 	currentImage := found.Spec.Template.Spec.Containers[0].Image
+ 
+ 	if currentImage != desiredImage {
++		// Level 4 Increment the upgrades metric
++		upgrades.Inc()
++
+ 		found.Spec.Template.Spec.Containers[0].Image = desiredImage
+ 		err = r.Update(ctx, found)
+ 		if err != nil {
++			// Level 4 Increment the upgradesFailures metric
++			upgradesFailures.Inc()
+ 			log.Error(err, "Failed to update Recipe App version")
+ 			return ctrl.Result{}, err
+ 		}
