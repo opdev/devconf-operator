@@ -18,7 +18,7 @@ Use our provided patch for customizing the Recipe resource definition:
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0001-recipe-type.patch
 patching file api/v1alpha1/recipe_types.go
 $ make manifests
-/home/mgoerens/dev/test-workshop1/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+/home/ec2-user/devconf-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 ```
 
 # Add code to provision child resources
@@ -36,13 +36,15 @@ We're going to have to create the following child resources:
 We create a `internal/resources/` subfolder to host the child resources definitions, and edit the controller loop to ensure those objects are created:
 
 ```shell
-$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0002-child-resources.patchpatching file internal/controller/recipe_controller.go
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0002-child-resources.patch
+patching file internal/controller/recipe_controller.go
 patching file internal/resources/resources/configmap.go
 patching file internal/resources/resources/deployment.go
 patching file internal/resources/resources/mysqldeployment.go
 patching file internal/resources/resources/pvc.go
 patching file internal/resources/resources/service.go
 patching file Dockerfile
+$ make manifests
 ```
 
 # Test Level 1
