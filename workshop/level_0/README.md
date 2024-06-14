@@ -53,4 +53,4 @@ $ operator-sdk init --domain opdev.com --repo github.com/opdev/devconf-operator
 $ patch < ${WORKSHOP_REPO}/workshop/level_0/patches/0001-controller-gen-version.patch
 ```
 
-## [Onto Level 1...](../level_1/)
+# [Onto Level 1...](../level_1/)
