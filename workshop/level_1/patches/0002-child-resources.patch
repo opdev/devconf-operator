@@ -289,8 +289,8 @@ index 72c9d42..945cfc4 100644
 +		Owns(&appsv1.Deployment{}).
 +		Owns(&corev1.ConfigMap{}).
 +		Owns(&corev1.PersistentVolumeClaim{}).
-+		Owns(&appsv1.Secret{}).
-+		Owns(&appsv1.Service{}).
++		Owns(&corev1.Secret{}).
++		Owns(&corev1.Service{}).
  		Complete(r)
  }
 diff --git a/internal/resources/configmap.go b/internal/resources/configmap.go

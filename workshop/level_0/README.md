@@ -6,12 +6,14 @@
 $ go version
 go version go1.22.3 linux/amd64
 $ operator-sdk version
-operator-sdk version: "v1.26.0", commit: "cbeec475e4612e19f1047ff7014342afe93f60d2", kubernetes version: "1.25.0", go version: "go1.19.3", GOOS: "linux", GOARCH: "amd64"
+operator-sdk version: "v1.34.2", commit: "81dd3cb24b8744de03d312c1ba23bfc617044005", kubernetes version: "1.28.0", go version: "go1.21.10", GOOS: "linux", GOARCH: "amd64"
 $ oc version
 Client Version: 4.15.17
 Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3
+Server Version: 4.14.27
+Kubernetes Version: v1.27.13+048520e
 $ oc status
-In project default on server https://api.exe-workshop-workshopdevconf1-pool-zrn7g.coreostrain.me:6443
+In project default on server https://api.exe-workshop-workshopdevconf1-pool-4ppbp.coreostrain.me:6443
 
 svc/openshift - kubernetes.default.svc.cluster.local
 svc/kubernetes - 172.30.0.1:443 -> 6443
@@ -25,8 +27,8 @@ Clone the workshop's repository to get easy access to instructions, snippets and
 
 ```shell
 $ echo "export WORKSHOP_REPO=~/workshop_repo" >> ~/.bashrc
-$ . ~/bashrc
-$ git clone git@github.com:opdev/devconf-operator.git ${WORKSHOP_REPO}
+$ . ~/.bashrc
+$ git clone https://github.com/mgoerens/devconf-operator.git ${WORKSHOP_REPO}
 ```
 
 ## Prepare local folder
