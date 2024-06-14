@@ -295,9 +295,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	currentImage := found.Spec.Template.Spec.Containers[0].Image
 
 	if currentImage != desiredImage {
+		// Level 4 Increment the upgrades metric
+		upgrades.Inc()
+
 		found.Spec.Template.Spec.Containers[0].Image = desiredImage
 		err = r.Update(ctx, found)
 		if err != nil {
+			// Level 4 Increment the upgradesFailures metric
+			upgradesFailures.Inc()
 			log.Error(err, "Failed to update Recipe App version")
 			return ctrl.Result{}, err
 		}
