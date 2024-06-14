@@ -72,11 +72,12 @@ $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0003-example-recip
 
 ```shell
 $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
+$ oc get po,deploy,pvc,secrets,configmap,service
 ```
 
 # To go further...
 
-* Watch for resource modifications
-* Adopt the subreconciler pattern
+* With the current implementation, resources are not being reconciled if they are modified externally (with the exception of the frontend's deployment replica count). We only check for the existence of a child resource.
+* The main reconcile function is 238 lines long, and repeats many times the same logic for creating each child resource. One way to reduce code duplication and improve readability is to adopt a subreconciler pattern (See [this blog post](https://www.redhat.com/en/blog/subreconciler-patterns-in-action) for an example)
 
-## [Onto Level 2...](../level_2/)
+# [Onto Level 2...](../level_2/)

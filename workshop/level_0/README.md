@@ -2,6 +2,8 @@
 
 ## Check tools version and OCP access
 
+The following instructions have been tested using:
+
 ```shell
 $ go version
 go version go1.22.3 linux/amd64
@@ -43,13 +45,17 @@ Initialized empty Git repository in /home/ec2-user/devconf-operator/.git/
 
 ## Initialize a new Go Operator project
 
-Scaffold a new go operator project
+Scaffold a new go operator project using `operator-sdk`
 
 ```shell
 $ operator-sdk init --domain opdev.com --repo github.com/opdev/devconf-operator
 ```
 
 ## Patch scaffolded project
+
+The current version of `operator-sdk` is configured to install `controller-gen` in `v.13.0`, that has some known issues.
+
+To workaround that, let's patch the Makefile with:
 
 ```shell
 $ patch < ${WORKSHOP_REPO}/workshop/level_0/patches/0001-controller-gen-version.patch
