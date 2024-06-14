@@ -11,10 +11,10 @@ Instructions are available under the [`workshop/`](./workshop/) directoy.
 Starting from an existing containerized application we'll go step-by-step through each level:
 * [Level 0](./workshop/level_0/): Initialize a new operator Project
 * [Level 1](./workshop/level_1/): Allow the deployment of the `Recipe` application
-* [Level 2](./workshop/level_2/):
-* [Level 3](./workshop/level_3/):
-* [Level 4](./workshop/level_4/):
-* [Level 5](./workshop/level_5/):
+* [Level 2](./workshop/level_2/): Seamless upgrade for the operator and the operand
+* [Level 3](./workshop/level_3/): Backup and restore the operand from the operator itself
+* [Level 4](./workshop/level_4/): Full monitoring and alerting for your operand
+* [Level 5](./workshop/level_5/): Autopilot with the operator!
 
 Happy hacking !
 
