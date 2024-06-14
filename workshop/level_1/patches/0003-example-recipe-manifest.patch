@@ -9,9 +9,9 @@ index 2cf4344..0b12f82 100644
 -  labels:
 -    app.kubernetes.io/name: recipe
 -    app.kubernetes.io/instance: recipe-sample
--    app.kubernetes.io/part-of: test-workshop2
+-    app.kubernetes.io/part-of: decvonf-operator
 -    app.kubernetes.io/managed-by: kustomize
--    app.kubernetes.io/created-by: test-workshop2
+-    app.kubernetes.io/created-by: decvonf-operator
    name: recipe-sample
  spec:
 -  # TODO(user): Add fields here
