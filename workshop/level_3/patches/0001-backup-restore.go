@@ -1,0 +1,402 @@
+diff --git a/api/v1alpha1/recipe_types.go b/api/v1alpha1/recipe_types.go
+index ecb4edb..1d3d003 100644
+--- a/api/v1alpha1/recipe_types.go
++++ b/api/v1alpha1/recipe_types.go
+@@ -58,6 +58,24 @@ type DatabaseSpec struct {
+ 	// SecurityContext in case of Openshift
+ 	// +optional
+ 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
++	// BackupPolicy
++	// +optional
++	BackupPolicy BackupPolicySpec `json:"backupPolicySpec,omitempty"`
++	// InitRestore
++	// +optional
++	InitRestore bool `json:"initRestore,omitempty"`
++}
++
++type BackupPolicySpec struct {
++	// Backup Schedule
++	// +optional
++	Schedule string `json:"schedule,omitempty"`
++	// Backup Schedule
++	// +optional
++	Tmz string `json:"timezone,omitempty"`
++	// VolumeName which should be used at MySQL DB.
++	// +optional
++	VolumeName string `json:"volumeName,omitempty"`
+ }
+ 
+ // RecipeStatus defines the observed state of Recipe
+diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
+index 22bdb92..8dd797d 100644
+--- a/internal/controller/recipe_controller.go
++++ b/internal/controller/recipe_controller.go
+@@ -21,6 +21,7 @@ import (
+ 	"fmt"
+ 
+ 	appsv1 "k8s.io/api/apps/v1"
++	batchv1 "k8s.io/api/batch/v1"
+ 	corev1 "k8s.io/api/core/v1"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+@@ -42,6 +43,7 @@ type RecipeReconciler struct {
+ //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/status,verbs=get;update;patch
+ //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
+ //+kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=*
++//+kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=*
+ //+kubebuilder:rbac:groups="",resources=configmaps;endpoints;events;persistentvolumeclaims;pods;namespaces;secrets;serviceaccounts;services;services/finalizers,verbs=*
+ 
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+@@ -312,6 +314,71 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+ 		return ctrl.Result{}, err
+ 	}
+ 
++	pvcCronJob, err := resources.PersistentVolumeClaimForBackup(recipe, r.Scheme)
++	if err != nil {
++		log.Error(err, "Failed to define PVC-CronJob for recipe")
++		return ctrl.Result{}, err
++	}
++	// Check if the pvcCronJob already exists
++	err = r.Get(ctx, client.ObjectKey{Name: pvcCronJob.Name, Namespace: pvcCronJob.Namespace}, &corev1.PersistentVolumeClaim{})
++	if err != nil && apierrors.IsNotFound(err) {
++		log.Info("Creating a new pvcCronJob")
++		err = r.Create(ctx, pvcCronJob)
++		if err != nil {
++			log.Error(err, "Failed to create new pvcCronJob", "pvcCronJob.Namespace", pvcCronJob.Namespace, "pvcCronJob.Name", pvcCronJob.Name)
++			return ctrl.Result{}, err
++		}
++		// pvcCronJob created successfully - return and requeue
++		return ctrl.Result{Requeue: true}, nil
++	} else if err != nil {
++		log.Error(err, "Failed to get pvcCronJob")
++		return ctrl.Result{}, err
++	}
++
++	cronJob, err := resources.CronJobForMySqlBackup(recipe, r.Scheme)
++	if err != nil {
++		log.Error(err, "Failed to create a CronJob Backup resource for recipe")
++		return ctrl.Result{}, err
++	}
++
++	foundCronJob := &batchv1.CronJob{}
++	err = r.Get(ctx, client.ObjectKey{Name: cronJob.Name, Namespace: cronJob.Namespace}, foundCronJob)
++	if err != nil && apierrors.IsNotFound(err) {
++		log.Info("Creating a new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
++		err = r.Create(ctx, cronJob)
++		if err != nil {
++			log.Error(err, "Failed to create new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
++			return ctrl.Result{}, err
++		}
++		// CronJob created successfully - return and requeue
++		return ctrl.Result{Requeue: true}, nil
++	} else if err != nil {
++		log.Error(err, "Failed to filter CronJob")
++		return ctrl.Result{}, err
++	}
++
++	job, err := resources.JobForMySqlRestore(recipe, r.Scheme)
++	if err != nil {
++		log.Error(err, "Failed to define Restore Job for recipe")
++		return ctrl.Result{}, err
++	}
++	// Check if the job already exists
++	foundJob := &batchv1.Job{}
++	err = r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, foundJob)
++	if err != nil && apierrors.IsNotFound(err) {
++		log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
++		err = r.Create(ctx, job)
++		if err != nil {
++			log.Error(err, "Failed to create new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
++			return ctrl.Result{}, err
++		}
++		// Job created successfully - return and requeue
++		return ctrl.Result{Requeue: true}, nil
++	} else if err != nil {
++		log.Error(err, "Failed to filter Job")
++		return ctrl.Result{}, err
++	}
++
+ 	return ctrl.Result{}, nil
+ }
+ 
+@@ -324,5 +391,7 @@ func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+ 		Owns(&corev1.PersistentVolumeClaim{}).
+ 		Owns(&corev1.Secret{}).
+ 		Owns(&corev1.Service{}).
++		Owns(&batchv1.CronJob{}).
++		Owns(&batchv1.Job{}).
+ 		Complete(r)
+ }
+diff --git a/internal/resources/cronjob.go b/internal/resources/cronjob.go
+new file mode 100644
+index 0000000..cd239ef
+--- /dev/null
++++ b/internal/resources/cronjob.go
+@@ -0,0 +1,118 @@
++package resources
++
++import (
++	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
++	batchv1 "k8s.io/api/batch/v1"
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
++)
++
++// CronJobForMySqlBackup creates a CronJob that backups the for MySQL Database
++func CronJobForMySqlBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*batchv1.CronJob, error) {
++	var cronJob *batchv1.CronJob
++	if recipe.Spec.Database.BackupPolicy.Schedule != "" {
++		cronJob = &batchv1.CronJob{
++			ObjectMeta: metav1.ObjectMeta{
++				Name:      "mysql-job",
++				Namespace: recipe.Namespace,
++			},
++			Spec: batchv1.CronJobSpec{
++				ConcurrencyPolicy: batchv1.ForbidConcurrent,
++				Schedule:          recipe.Spec.Database.BackupPolicy.Schedule,
++				TimeZone:          &recipe.Spec.Database.BackupPolicy.Tmz,
++				JobTemplate: batchv1.JobTemplateSpec{
++					Spec: batchv1.JobSpec{
++						Template: corev1.PodTemplateSpec{
++							Spec: corev1.PodSpec{
++								Containers: []corev1.Container{{
++									Image:           "fradelg/mysql-cron-backup",
++									Name:            "job-mysql",
++									ImagePullPolicy: corev1.PullIfNotPresent,
++									Env: []corev1.EnvVar{
++										{
++											Name:  "MAX_BACKUPS",
++											Value: "2",
++										},
++										{
++											Name:  "CRON_TIME",
++											Value: recipe.Spec.Database.BackupPolicy.Schedule,
++										},
++										{
++											Name:  "MYSQLDUMP_OPTS",
++											Value: "--no-tablespaces",
++										},
++										{
++											Name: "MYSQL_HOST",
++											ValueFrom: &corev1.EnvVarSource{
++												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++													LocalObjectReference: corev1.LocalObjectReference{
++														Name: recipe.Name + "-mysql-config",
++													},
++													Key: "DB_HOST",
++												},
++											},
++										}, {
++											Name: "MYSQL_USER",
++											ValueFrom: &corev1.EnvVarSource{
++												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++													LocalObjectReference: corev1.LocalObjectReference{
++														Name: recipe.Name + "-mysql-config",
++													},
++													Key: "MYSQL_USER",
++												},
++											},
++										}, {
++											Name: "MYSQL_PASSWORD",
++											ValueFrom: &corev1.EnvVarSource{
++												SecretKeyRef: &corev1.SecretKeySelector{
++													LocalObjectReference: corev1.LocalObjectReference{
++														Name: recipe.Name + "-mysql",
++													},
++													Key: "MYSQL_PASSWORD",
++												},
++											},
++										}, {
++											Name: "MYSQL_ROOT_PASSWORD",
++											ValueFrom: &corev1.EnvVarSource{
++												SecretKeyRef: &corev1.SecretKeySelector{
++													LocalObjectReference: corev1.LocalObjectReference{
++														Name: recipe.Name + "-mysql",
++													},
++													Key: "MYSQL_ROOT_PASSWORD",
++												},
++											},
++										},
++									},
++									VolumeMounts: []corev1.VolumeMount{
++										{
++											Name:      recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++											MountPath: "/backup",
++										},
++									},
++								}},
++								Volumes: []corev1.Volume{
++									{
++										Name: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++										VolumeSource: corev1.VolumeSource{
++											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
++												ClaimName: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++											},
++										},
++									},
++								},
++								RestartPolicy: "OnFailure",
++							},
++						},
++					},
++				},
++			},
++		}
++	}
++	if err := ctrl.SetControllerReference(recipe, cronJob, scheme); err != nil {
++		return nil, err
++	}
++
++	return cronJob, nil
++}
+diff --git a/internal/resources/job.go b/internal/resources/job.go
+new file mode 100644
+index 0000000..62d6cb0
+--- /dev/null
++++ b/internal/resources/job.go
+@@ -0,0 +1,107 @@
++package resources
++
++import (
++	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
++	batchv1 "k8s.io/api/batch/v1"
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
++)
++
++// JobForMySqlRestore creates a Job that restores the for MySQL Database
++func JobForMySqlRestore(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*batchv1.Job, error) {
++	var job *batchv1.Job
++	if recipe.Spec.Database.InitRestore {
++		job = &batchv1.Job{
++			ObjectMeta: metav1.ObjectMeta{
++				Name:      "mysql-restore-job",
++				Namespace: recipe.Namespace,
++			},
++			Spec: batchv1.JobSpec{
++				Template: corev1.PodTemplateSpec{
++					Spec: corev1.PodSpec{
++						Containers: []corev1.Container{{
++							Image:           "fradelg/mysql-cron-backup",
++							Name:            "mysql-restore-job",
++							ImagePullPolicy: corev1.PullIfNotPresent,
++							Env: []corev1.EnvVar{
++								{
++									Name:  "CRON_TIME",
++									Value: recipe.Spec.Database.BackupPolicy.Schedule,
++								},
++								{
++									Name:  "INIT_RESTORE_LATEST",
++									Value: "1",
++								},
++								{
++									Name: "MYSQL_HOST",
++									ValueFrom: &corev1.EnvVarSource{
++										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++											LocalObjectReference: corev1.LocalObjectReference{
++												Name: recipe.Name + "-mysql-config",
++											},
++											Key: "DB_HOST",
++										},
++									},
++								}, {
++									Name: "MYSQL_USER",
++									ValueFrom: &corev1.EnvVarSource{
++										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++											LocalObjectReference: corev1.LocalObjectReference{
++												Name: recipe.Name + "-mysql-config",
++											},
++											Key: "MYSQL_USER",
++										},
++									},
++								}, {
++									Name: "MYSQL_PASSWORD",
++									ValueFrom: &corev1.EnvVarSource{
++										SecretKeyRef: &corev1.SecretKeySelector{
++											LocalObjectReference: corev1.LocalObjectReference{
++												Name: recipe.Name + "-mysql",
++											},
++											Key: "MYSQL_PASSWORD",
++										},
++									},
++								}, {
++									Name: "MYSQL_ROOT_PASSWORD",
++									ValueFrom: &corev1.EnvVarSource{
++										SecretKeyRef: &corev1.SecretKeySelector{
++											LocalObjectReference: corev1.LocalObjectReference{
++												Name: recipe.Name + "-mysql",
++											},
++											Key: "MYSQL_ROOT_PASSWORD",
++										},
++									},
++								},
++							},
++							VolumeMounts: []corev1.VolumeMount{
++								{
++									Name:      recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++									MountPath: "/backup",
++								},
++							},
++						}},
++						Volumes: []corev1.Volume{
++							{
++								Name: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++								VolumeSource: corev1.VolumeSource{
++									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
++										ClaimName: recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++									},
++								},
++							},
++						},
++						RestartPolicy: "OnFailure",
++					},
++				},
++			},
++		}
++	}
++	if err := ctrl.SetControllerReference(recipe, job, scheme); err != nil {
++		return nil, err
++	}
++
++	return job, nil
++}
+diff --git a/internal/resources/pvc.go b/internal/resources/pvc.go
+index a3ef934..4883b58 100644
+--- a/internal/resources/pvc.go
++++ b/internal/resources/pvc.go
+@@ -35,3 +35,31 @@ func PersistentVolumeClaimForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *ru
+ 
+ 	return pvc, nil
+ }
++
++func PersistentVolumeClaimForBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
++	var storageClassName = "nfs"
++	pvc := &corev1.PersistentVolumeClaim{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      recipe.Name + recipe.Spec.Database.BackupPolicy.VolumeName,
++			Namespace: recipe.Namespace,
++		},
++		Spec: corev1.PersistentVolumeClaimSpec{
++			AccessModes: []corev1.PersistentVolumeAccessMode{
++				corev1.ReadWriteMany,
++			},
++			StorageClassName: &storageClassName,
++			Resources: corev1.ResourceRequirements{
++				Requests: corev1.ResourceList{
++					corev1.ResourceStorage: resource.MustParse("1Gi"),
++				},
++			},
++		},
++	}
++
++	// Set owner reference
++	if err := ctrl.SetControllerReference(recipe, pvc, scheme); err != nil {
++		return nil, err
++	}
++
++	return pvc, nil
++}

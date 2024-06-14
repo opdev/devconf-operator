@@ -1,0 +1,13 @@
+diff --git a/config/samples/devconfcz_v1alpha1_recipe.yaml b/config/samples/devconfcz_v1alpha1_recipe.yaml
+index 0b12f82..6cda10d 100644
+--- a/config/samples/devconfcz_v1alpha1_recipe.yaml
++++ b/config/samples/devconfcz_v1alpha1_recipe.yaml
+@@ -15,3 +15,7 @@ spec:
+       runAsNonRoot: false
+     podSecurityContext:
+       runAsNonRoot: false
++  backupPolicySpec:
++    volumeName: "-backup"
++    schedule: "*/1 * * * *"
++    timezone: "Europe/Berlin"
+
