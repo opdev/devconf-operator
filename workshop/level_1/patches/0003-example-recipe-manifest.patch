@@ -1,19 +1,29 @@
 diff --git a/config/samples/devconfcz_v1alpha1_recipe.yaml b/config/samples/devconfcz_v1alpha1_recipe.yaml
-index 71132b6..4567046 100644
+index 2cf4344..0b12f82 100644
 --- a/config/samples/devconfcz_v1alpha1_recipe.yaml
 +++ b/config/samples/devconfcz_v1alpha1_recipe.yaml
-@@ -1,12 +1,7 @@
+@@ -1,12 +1,17 @@
  apiVersion: devconfcz.opdev.com/v1alpha1
  kind: Recipe
  metadata:
 -  labels:
 -    app.kubernetes.io/name: recipe
 -    app.kubernetes.io/instance: recipe-sample
--    app.kubernetes.io/part-of: devconf-operator
+-    app.kubernetes.io/part-of: test-workshop2
 -    app.kubernetes.io/managed-by: kustomize
--    app.kubernetes.io/created-by: devconf-operator
+-    app.kubernetes.io/created-by: test-workshop2
    name: recipe-sample
  spec:
 -  # TODO(user): Add fields here
 +  version: "v1.0.0"
-+  count: 2
++  replicas: 2
++  securityContext:
++    runAsNonRoot: false
++  podSecurityContext:
++    runAsNonRoot: false
++  database:
++    image: mysql:5.7
++    securityContext:
++      runAsNonRoot: false
++    podSecurityContext:
++      runAsNonRoot: false

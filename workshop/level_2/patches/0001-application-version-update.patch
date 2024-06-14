@@ -1,5 +1,5 @@
 diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
-index 72b4bc5..5726ea3 100644
+index 945cfc4..d3b12d9 100644
 --- a/internal/controller/recipe_controller.go
 +++ b/internal/controller/recipe_controller.go
 @@ -18,6 +18,7 @@ package controller
@@ -10,7 +10,7 @@ index 72b4bc5..5726ea3 100644
  
  	appsv1 "k8s.io/api/apps/v1"
  	corev1 "k8s.io/api/core/v1"
-@@ -57,6 +58,7 @@ type RecipeReconciler struct {
+@@ -55,6 +56,7 @@ type RecipeReconciler struct {
  func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
  	_ = log.FromContext(ctx)
  	log := log.FromContext(ctx)
@@ -18,9 +18,9 @@ index 72b4bc5..5726ea3 100644
  
  	// get an instance of the recipe object
  	recipe := &devconfczv1alpha1.Recipe{}
-@@ -265,6 +267,27 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
- 		}
- 	}
+@@ -279,6 +281,27 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+ 	// If the Deployment already exists and the size is the same, then do nothing
+ 	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
  
 +	// Level 2: Update Operand (Recipe App)
 +	log.Info("Reconciling Recipe App version")
