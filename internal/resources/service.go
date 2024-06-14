@@ -9,11 +9,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// MySQLServiceForrecipe creates a Service for the MySQL Deployment and sets the owner reference
-func MySQLServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
+// MySQLServiceForRecipe creates a Service for the MySQL Deployment and sets the owner reference
+func MySQLServiceForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql",
+			Name:      recipe.Name + "-mysql",
 			Namespace: recipe.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -23,7 +23,7 @@ func MySQLServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sch
 				},
 			},
 			Selector: map[string]string{
-				"app": "mysql",
+				"app": recipe.Name + "-mysql",
 			},
 		},
 	}
@@ -36,16 +36,16 @@ func MySQLServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sch
 	return service, nil
 }
 
-// RecipeServiceForrecipe creates a Service for the Recipe application and sets the owner reference
-func RecipeServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
+// RecipeServiceForRecipe creates a Service for the Recipe application and sets the owner reference
+func RecipeServiceForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "recipe-app-service",
+			Name:      recipe.Name,
 			Namespace: recipe.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"app": "recipe-app",
+				"app": recipe.Name,
 			},
 			Ports: []corev1.ServicePort{
 				{

@@ -31,7 +31,7 @@ var deploySecContext = &corev1.SecurityContext{
 	},
 }
 
-func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+func DeploymentForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	if recipe.Spec.PodSecurityContext != nil {
 		deployPodSecContext = *recipe.Spec.PodSecurityContext
 	}
@@ -53,13 +53,13 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "recipe-app",
+					"app": recipe.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "recipe-app",
+						"app": recipe.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -80,44 +80,47 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 								ValueFrom: &corev1.EnvVarSource{
 									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
+											Name: recipe.Name + "-mysql-config",
 										},
 										Key: "DB_HOST",
 									},
 								},
-							},
-							{
+							}, {
 								Name: "DB_PORT",
 								ValueFrom: &corev1.EnvVarSource{
 									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
+											Name: recipe.Name + "-mysql-config",
 										},
 										Key: "DB_PORT",
 									},
 								},
-							},
-							{
+							}, {
 								Name: "DB_NAME",
 								ValueFrom: &corev1.EnvVarSource{
 									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
+											Name: recipe.Name + "-mysql-config",
 										},
 										Key: "MYSQL_DATABASE",
 									},
 								},
-							},
-							{
-								Name:  "DB_USER",
-								Value: "recipeuser",
-							},
-							{
-								Name: "DB_PASSWORD",
+							}, {
+								Name: "DB_USER",
 								ValueFrom: &corev1.EnvVarSource{
 									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "mysql-config",
+											Name: recipe.Name + "-mysql-config",
+										},
+										Key: "MYSQL_USER",
+									},
+								},
+							}, {
+								Name: "DB_PASSWORD",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: recipe.Name + "-mysql",
 										},
 										Key: "MYSQL_PASSWORD",
 									},

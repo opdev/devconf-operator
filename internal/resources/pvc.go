@@ -9,11 +9,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// PersistentVolumeClaimForrecipe creates a PVC for MySQL and sets the owner reference
-func PersistentVolumeClaimForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
+// PersistentVolumeClaimForRecipe creates a PVC for MySQL and sets the owner reference
+func PersistentVolumeClaimForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql",
+			Name:      recipe.Name + "-mysql",
 			Namespace: recipe.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
