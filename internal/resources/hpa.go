@@ -9,10 +9,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const (
-	defaultMemoryTarget = int32(60)
-)
-
 // Autoscalers returns an HPAs based on specs.
 func AutoScaler(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	metrics := []autoscalingv2.MetricSpec{}

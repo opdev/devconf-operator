@@ -16,3 +16,9 @@ spec:
     requests:
       cpu: 5m
       memory: 64Mi
+  database:
+    image: mysql:5.7
+    securityContext:
+      runAsNonRoot: false
+    podSecurityContext:
+      runAsNonRoot: false
