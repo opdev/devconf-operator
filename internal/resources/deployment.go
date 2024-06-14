@@ -9,7 +9,36 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+var deployPodSecContext = corev1.PodSecurityContext{
+	RunAsNonRoot: &[]bool{true}[0],
+	SeccompProfile: &corev1.SeccompProfile{
+		Type: corev1.SeccompProfileTypeRuntimeDefault,
+	},
+}
+
+var deploySecContext = &corev1.SecurityContext{
+	// WARNING: Ensure that the image used defines an UserID in the Dockerfile
+	// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
+	// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
+	// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
+	// RunAsUser fields empty.
+	RunAsNonRoot:             &[]bool{true}[0],
+	AllowPrivilegeEscalation: &[]bool{false}[0],
+	Capabilities: &corev1.Capabilities{
+		Drop: []corev1.Capability{
+			"ALL",
+		},
+	},
+}
+
 func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+	if recipe.Spec.PodSecurityContext != nil {
+		deployPodSecContext = *recipe.Spec.PodSecurityContext
+	}
+
+	if recipe.Spec.SecurityContext != nil {
+		deploySecContext = recipe.Spec.SecurityContext
+	}
 
 	replicas := recipe.Spec.Replicas
 	version := recipe.Spec.Version
@@ -34,12 +63,7 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 					},
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
+					SecurityContext: &deployPodSecContext,
 					Containers: []corev1.Container{{
 						Image:           image,
 						Name:            "recipe-app",
@@ -100,21 +124,8 @@ func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Sc
 								},
 							},
 						},
-						SecurityContext: &corev1.SecurityContext{
-							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
-							// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
-							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
-							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
-							// RunAsUser fields empty.
-							RunAsNonRoot:             &[]bool{true}[0],
-							AllowPrivilegeEscalation: &[]bool{false}[0],
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{
-									"ALL",
-								},
-							},
-						},
-						Resources: recipe.Spec.Resources,
+						SecurityContext: deploySecContext,
+						Resources:       recipe.Spec.Resources,
 					}},
 				},
 			},
