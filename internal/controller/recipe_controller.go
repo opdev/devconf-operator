@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +58,7 @@ type RecipeReconciler struct {
 func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 	log := log.FromContext(ctx)
+	imagename := "quay.io/opdev/recipe_app"
 
 	// get an instance of the recipe object
 	recipe := &devconfczv1alpha1.Recipe{}
@@ -261,6 +263,27 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		err = r.Update(ctx, found)
 		if err != nil {
 			log.Error(err, "Failed to update Recipe Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Level 2: Update Operand (Recipe App)
+	log.Info("Reconciling Recipe App version")
+	found = &appsv1.Deployment{}
+	err = r.Get(ctx, client.ObjectKey{Name: recipe.Name, Namespace: recipe.Namespace}, found)
+
+	if err != nil {
+		log.Error(err, "Failed to get Recipe App Deployment")
+		return ctrl.Result{}, err
+	}
+	desiredImage := fmt.Sprintf("%s:%s", imagename, recipe.Spec.Version)
+	currentImage := found.Spec.Template.Spec.Containers[0].Image
+
+	if currentImage != desiredImage {
+		found.Spec.Template.Spec.Containers[0].Image = desiredImage
+		err = r.Update(ctx, found)
+		if err != nil {
+			log.Error(err, "Failed to update Recipe App version")
 			return ctrl.Result{}, err
 		}
 	}
