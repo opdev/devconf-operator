@@ -75,14 +75,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		log.Error(err, "Failed to get recipe")
 		return ctrl.Result{}, err
 	}
+
 	// Define a new ConfigMap object for initdbconfigmap mysql database
-	mysqlInitDBConfigMap, err := resources.MySQLInitDBConfigMapForrecipe(recipe, r.Scheme)
+	mysqlInitDBConfigMap, err := resources.MySQLInitDBConfigMapForRecipe(recipe, r.Scheme)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	// Check if the InitDB ConfigMap already exists
-	foundMysqlInitDBConfigMap := &corev1.ConfigMap{}
-	err = r.Get(ctx, client.ObjectKey{Name: mysqlInitDBConfigMap.Name, Namespace: mysqlInitDBConfigMap.Namespace}, foundMysqlInitDBConfigMap)
+	err = r.Get(ctx, client.ObjectKey{Name: mysqlInitDBConfigMap.Name, Namespace: mysqlInitDBConfigMap.Namespace}, &corev1.ConfigMap{})
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("Creating a new ConfigMap for mysql database initialization")
 		err = r.Create(ctx, mysqlInitDBConfigMap)
@@ -98,13 +98,12 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Define a new ConfigMap object for mysql database
-	mysqlConfigMap, err := resources.MySQLConfigMapForrecipe(recipe, r.Scheme)
+	mysqlConfigMap, err := resources.MySQLConfigMapForRecipe(recipe, r.Scheme)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	// Check if the ConfigMap already exists
-	foundMySQLConfigMap := &corev1.ConfigMap{}
-	err = r.Get(ctx, client.ObjectKey{Name: mysqlConfigMap.Name, Namespace: mysqlConfigMap.Namespace}, foundMySQLConfigMap)
+	err = r.Get(ctx, client.ObjectKey{Name: mysqlConfigMap.Name, Namespace: mysqlConfigMap.Namespace}, &corev1.ConfigMap{})
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("Creating a new MySQL ConfigMap", "ConfigMap.Namespace", mysqlConfigMap.Namespace, "ConfigMap.Name", mysqlConfigMap.Name)
 		err = r.Create(ctx, mysqlConfigMap)
@@ -117,15 +116,35 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	// Define a new Secret object for mysql database
+	mysqlSecret, err := resources.MySQLSecretForRecipe(recipe, r.Scheme)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// Check if the Secret already exists
+	err = r.Get(ctx, client.ObjectKey{Name: mysqlSecret.Name, Namespace: mysqlSecret.Namespace}, &corev1.Secret{})
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new Secret for mysql")
+		err = r.Create(ctx, mysqlSecret)
+		if err != nil {
+			log.Error(err, "Failed to create new Secret for mysql database initialization", "Secret.Namespace", mysqlSecret.Namespace, "Secret.Name", mysqlSecret.Name)
+			return ctrl.Result{}, err
+		}
+		// Secret created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Secret for mysql database initialization")
+		return ctrl.Result{}, err
+	}
+
 	// Define a new service object for recipe application
-	service, err := resources.RecipeServiceForrecipe(recipe, r.Scheme)
+	service, err := resources.RecipeServiceForRecipe(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define new service resource for recipe application")
 		return ctrl.Result{}, err
 	}
 	// Check if the service already exists
-	foundService := &corev1.Service{}
-	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, &corev1.Service{})
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("Creating a new service for recipe application")
 		err = r.Create(ctx, service)
@@ -141,14 +160,13 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Define a new service object for mysql database
-	service, err = resources.MySQLServiceForrecipe(recipe, r.Scheme)
+	service, err = resources.MySQLServiceForRecipe(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define new service resource for mysql database")
 		return ctrl.Result{}, err
 	}
 	// Check if the service already exists
-	foundService = &corev1.Service{}
-	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, &corev1.Service{})
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("Creating a new service resource for mysql database")
 		err = r.Create(ctx, service)
@@ -164,14 +182,13 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Define a new persistent volume claim object
-	pvc, err := resources.PersistentVolumeClaimForrecipe(recipe, r.Scheme)
+	pvc, err := resources.PersistentVolumeClaimForRecipe(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define PVC for recipe")
 		return ctrl.Result{}, err
 	}
 	// Check if the PVC already exists
-	foundPVC := &corev1.PersistentVolumeClaim{}
-	err = r.Get(ctx, client.ObjectKey{Name: pvc.Name, Namespace: pvc.Namespace}, foundPVC)
+	err = r.Get(ctx, client.ObjectKey{Name: pvc.Name, Namespace: pvc.Namespace}, &corev1.PersistentVolumeClaim{})
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("Creating a new PVC")
 		err = r.Create(ctx, pvc)
@@ -187,15 +204,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Define a new mysql database Deployment object
-	dep, err := resources.MysqlDeploymentForrecipe(recipe, r.Scheme)
+	dep, err := resources.MysqlDeploymentForRecipe(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define new mysql deployment resource for recipe")
 		return ctrl.Result{}, err
 	}
 
 	// Check if the Mysql database Deployment already exists
-	found := &appsv1.Deployment{}
-	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
+	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, &appsv1.Deployment{})
 	if err != nil && apierrors.IsNotFound(err) {
 		// Update status for MySQL Deployment
 		recipe.Status.MySQLStatus = "Creating..."
@@ -222,18 +238,16 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		recipe.Status.MySQLStatus = "Failed"
 		return ctrl.Result{}, err
 	}
-	// mysql database Deployment already exists - don't requeue
-	log.Info("Skip reconcile: mysql database deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
 	// Define a new recipe app deployment object
-	dep, err = resources.DeploymentForRecipeApp(recipe, r.Scheme)
+	dep, err = resources.DeploymentForRecipe(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to define new Deployment resource for recipe")
 		return ctrl.Result{}, err
 	}
 
 	// Check if the Deployment already exists
-	found = &appsv1.Deployment{}
+	found := &appsv1.Deployment{}
 	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 

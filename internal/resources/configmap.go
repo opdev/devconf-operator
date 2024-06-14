@@ -8,20 +8,18 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// MySQLConfigMapForrecipe creates a ConfigMap for MySQL configuration
-func MySQLConfigMapForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
+// MySQLConfigMapForRecipe creates a ConfigMap for MySQL configuration
+func MySQLConfigMapForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql-config",
+			Name:      recipe.Name + "-mysql-config",
 			Namespace: recipe.Namespace,
 		},
 		Data: map[string]string{
-			"DB_HOST":             "mysql",
-			"DB_PORT":             "3306",
-			"MYSQL_DATABASE":      "recipes",
-			"MYSQL_USER":          "recipeuser",
-			"MYSQL_PASSWORD":      "recipepassword",
-			"MYSQL_ROOT_PASSWORD": "rootpassword",
+			"DB_HOST":        "mysql",
+			"DB_PORT":        "3306",
+			"MYSQL_DATABASE": "recipes",
+			"MYSQL_USER":     "recipeuser",
 		},
 	}
 
@@ -32,11 +30,11 @@ func MySQLConfigMapForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.S
 	return configMap, nil
 }
 
-// MySQLInitDBConfigMapForrecipe creates a ConfigMap for MySQL initialization
-func MySQLInitDBConfigMapForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
+// MySQLInitDBConfigMapForRecipe creates a ConfigMap for MySQL initialization
+func MySQLInitDBConfigMapForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql-initdb-config",
+			Name:      recipe.Name + "-mysql-initdb-config",
 			Namespace: recipe.Namespace,
 		},
 		Data: map[string]string{
