@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// MySQLConfigMapForrecipe creates a ConfigMap for MySQL configuration
+// JobForMySqlRestore creates a Job that restores the for MySQL Database
 func JobForMySqlRestore(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*batchv1.Job, error) {
 	var job *batchv1.Job
 	if recipe.Spec.Database.InitRestore {

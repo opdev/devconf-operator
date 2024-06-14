@@ -9,7 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// MySQLConfigMapForrecipe creates a ConfigMap for MySQL configuration
+// CronJobForMySqlBackup creates a CronJob that backups the for MySQL Database
 func CronJobForMySqlBackup(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*batchv1.CronJob, error) {
 	var cronJob *batchv1.CronJob
 	if recipe.Spec.Database.BackupPolicy.Schedule != "" {
