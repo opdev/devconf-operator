@@ -11,7 +11,12 @@ $ oc version
 Client Version: 4.15.17
 Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3
 $ oc status
+In project default on server https://api.exe-workshop-workshopdevconf1-pool-zrn7g.coreostrain.me:6443
 
+svc/openshift - kubernetes.default.svc.cluster.local
+svc/kubernetes - 172.30.0.1:443 -> 6443
+
+View details with 'oc describe <resource>/<name>' or list resources with 'oc get all'.
 ```
 
 ## Clone this repository
@@ -19,7 +24,7 @@ $ oc status
 Clone the workshop's repository to get easy access to instructions, snippets and patches:
 
 ```shell
-$ echo "export WORKSHOP_REPO=~/devconf-operator" >> ~/.bashrc
+$ echo "export WORKSHOP_REPO=~/workshop_repo" >> ~/.bashrc
 $ . ~/bashrc
 $ git clone git@github.com:opdev/devconf-operator.git ${WORKSHOP_REPO}
 ```
@@ -29,8 +34,9 @@ $ git clone git@github.com:opdev/devconf-operator.git ${WORKSHOP_REPO}
 Create a new directory for your project and initialize a local git repository:
 
 ```shell
-$ mkdir ~/recipe-operator && cd ~/recipe-operator
+$ mkdir ~/devconf-operator && cd ~/devconf-operator
 $ git init
+Initialized empty Git repository in /home/ec2-user/devconf-operator/.git/
 ```
 
 ## Initialize a new Go Operator project
@@ -38,7 +44,7 @@ $ git init
 Scaffold a new go operator project
 
 ```shell
-$ operator-sdk init --domain opdev.com --repo github.com/opdev/recipe-operator
+$ operator-sdk init --domain opdev.com --repo github.com/opdev/devconf-operator
 ```
 
 ## Patch scaffolded project

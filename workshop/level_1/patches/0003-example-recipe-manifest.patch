@@ -9,9 +9,9 @@ index 71132b6..4567046 100644
 -  labels:
 -    app.kubernetes.io/name: recipe
 -    app.kubernetes.io/instance: recipe-sample
--    app.kubernetes.io/part-of: test-workshop1
+-    app.kubernetes.io/part-of: devconf-operator
 -    app.kubernetes.io/managed-by: kustomize
--    app.kubernetes.io/created-by: test-workshop1
+-    app.kubernetes.io/created-by: devconf-operator
    name: recipe-sample
  spec:
 -  # TODO(user): Add fields here
