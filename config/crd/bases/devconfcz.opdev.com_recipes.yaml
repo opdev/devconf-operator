@@ -53,6 +53,9 @@ spec:
                       timezone:
                         description: Backup Schedule
                         type: string
+                      volumeName:
+                        description: VolumeName which should be used at MySQL DB.
+                        type: string
                     type: object
                   image:
                     description: Image set the image which should be used at MySQL

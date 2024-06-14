@@ -70,9 +70,6 @@ type HpaSpec struct {
 }
 
 type DatabaseSpec struct {
-	// VolumeName which should be used at MySQL DB.
-	// +optional
-	VolumeName string `json:"volumeName,omitempty"`
 	// Image set the image which should be used at MySQL DB.
 	// +optional
 	Image string `json:"image,omitempty"`
@@ -94,6 +91,9 @@ type BackupPolicySpec struct {
 	// Backup Schedule
 	// +optional
 	Tmz string `json:"timezone,omitempty"`
+	// VolumeName which should be used at MySQL DB.
+	// +optional
+	VolumeName string `json:"volumeName,omitempty"`
 }
 
 // RecipeStatus defines the observed state of Recipe

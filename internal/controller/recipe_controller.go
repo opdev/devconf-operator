@@ -348,6 +348,27 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	pvcCronJob, err := resources.PersistentVolumeClaimForBackup(recipe, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to define PVC-CronJob for recipe")
+		return ctrl.Result{}, err
+	}
+	// Check if the pvcCronJob already exists
+	err = r.Get(ctx, client.ObjectKey{Name: pvcCronJob.Name, Namespace: pvcCronJob.Namespace}, &corev1.PersistentVolumeClaim{})
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new pvcCronJob")
+		err = r.Create(ctx, pvcCronJob)
+		if err != nil {
+			log.Error(err, "Failed to create new pvcCronJob", "pvcCronJob.Namespace", pvcCronJob.Namespace, "pvcCronJob.Name", pvcCronJob.Name)
+			return ctrl.Result{}, err
+		}
+		// pvcCronJob created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get pvcCronJob")
+		return ctrl.Result{}, err
+	}
+
 	cronJob, err := resources.CronJobForMySqlBackup(recipe, r.Scheme)
 	if err != nil {
 		log.Error(err, "Failed to create a CronJob Backup resource for recipe")
