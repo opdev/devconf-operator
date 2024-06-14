@@ -70,6 +70,9 @@ type HpaSpec struct {
 }
 
 type DatabaseSpec struct {
+	// VolumeName which should be used at MySQL DB.
+	// +optional
+	VolumeName string `json:"volumeName,omitempty"`
 	// Image set the image which should be used at MySQL DB.
 	// +optional
 	Image string `json:"image,omitempty"`
@@ -79,6 +82,18 @@ type DatabaseSpec struct {
 	// SecurityContext in case of Openshift
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+	// BackupPolicy
+	// +optional
+	BackupPolicy BackupPolicySpec `json:"backupPolicySpec,omitempty"`
+}
+
+type BackupPolicySpec struct {
+	// Backup Schedule
+	// +optional
+	Schedule string `json:"schedule,omitempty"`
+	// Backup Schedule
+	// +optional
+	Tmz string `json:"timezone,omitempty"`
 }
 
 // RecipeStatus defines the observed state of Recipe

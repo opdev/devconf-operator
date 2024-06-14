@@ -26,3 +26,6 @@ spec:
       runAsNonRoot: false
     podSecurityContext:
       runAsNonRoot: false
+    backupPolicySpec:
+      schedule: "*/2 * * * *"
+      timezone: "Europe/Berlin"
