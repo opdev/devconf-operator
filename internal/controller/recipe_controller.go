@@ -34,7 +34,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 )
 
-// recipeReconciler reconciles a recipe object
+// RecipeReconciler reconciles a Recipe object
 type RecipeReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -52,7 +52,7 @@ type RecipeReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the recipe object against the actual cluster state, and then
+// the Recipe object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
@@ -63,7 +63,7 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	log := log.FromContext(ctx)
 	imagename := "quay.io/opdev/recipe_app"
 
-	// get an instance of the recipe object
+	// get an instance of the Recipe object
 	recipe := &devconfczv1alpha1.Recipe{}
 	err := r.Get(ctx, req.NamespacedName, recipe)
 	if err != nil {
@@ -427,6 +427,10 @@ func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devconfczv1alpha1.Recipe{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.Service{}).
 		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Owns(&batchv1.CronJob{}).
 		Owns(&batchv1.Job{}).
