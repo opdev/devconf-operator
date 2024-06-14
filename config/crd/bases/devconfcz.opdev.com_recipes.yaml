@@ -39,10 +39,87 @@ spec:
           spec:
             description: RecipeSpec defines the desired state of Recipe
             properties:
-              count:
+              hpa:
+                description: |-
+                  Hpa specifies the pod autoscaling configuration to use
+                  for the workload.
+                properties:
+                  maxReplicas:
+                    description: MaxReplicas sets an upper bound to the autoscaling
+                      feature. If MaxReplicas is set autoscaling is enabled.
+                    format: int32
+                    type: integer
+                  minReplicas:
+                    description: MinReplicas sets a lower bound to the autoscaling
+                      feature.  Set this if your are using autoscaling. It must be
+                      at least 1
+                    format: int32
+                    type: integer
+                  targetMemoryUtilization:
+                    description: TargetMemoryUtilization sets the target average memory
+                      utilization across all replicas
+                    format: int32
+                    type: integer
+                type: object
+              replicas:
                 description: Replicas is the number of replicas to run
                 format: int32
                 type: integer
+              resources:
+                description: Resources to set for Level 3 and 5.
+                properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                      that are used by this container.
+
+
+                      This is an alpha field and requires enabling the
+                      DynamicResourceAllocation feature gate.
+
+
+                      This field is immutable. It can only be set for containers.
+                    items:
+                      description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                            the Pod where this field is used. It makes that resource available
+                            inside a container.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  limits:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: |-
+                      Limits describes the maximum amount of compute resources allowed.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                  requests:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: |-
+                      Requests describes the minimum amount of compute resources required.
+                      If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                type: object
               version:
                 description: Version is the version of the recipe app image to run
                 type: string
@@ -51,6 +128,8 @@ spec:
             description: RecipeStatus defines the observed state of Recipe
             properties:
               mysqlStatus:
+                type: string
+              recipeAppHpa:
                 type: string
               recipeAppStatus:
                 type: string

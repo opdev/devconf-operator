@@ -302,6 +302,37 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// If the Deployment already exists and the size is the same, then do nothing
 	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
+	hpa, err := resources.AutoScaler(recipe, r.Scheme)
+	if err != nil {
+		log.Error(err, "Failed to create a HorizontalPodAutoscaler resource for recipe")
+		return ctrl.Result{}, err
+	}
+
+	foundHpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	err = r.Get(ctx, client.ObjectKey{Name: hpa.Name, Namespace: hpa.Namespace}, foundHpa)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("Creating a new HorizontalPodAutoScaler", "HorizontalPodAutoScaler.Namespace", hpa.Namespace, "HorizontalPodAutoScaler.Name", hpa.Name)
+		err = r.Create(ctx, hpa)
+		if err != nil {
+			log.Error(err, "Failed to create new HorizontalPodAutoScaler", "HorizontalPodAutoScaler.Namespace", hpa.Namespace, "HorizontalPodAutoScaler.Name", hpa.Name)
+
+			// Update status for Recipe App HorizontalPodAutoScaler
+			recipe.Status.RecipeAppHpa = "HPA Created"
+			err = r.Status().Update(ctx, recipe)
+			if err != nil {
+				log.Error(err, "Failed to update recipe hpa status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+		// HorizontalPodAutoScaler created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to filter HorizontalPodAutoScaler")
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 

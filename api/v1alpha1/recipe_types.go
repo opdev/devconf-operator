@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,6 +35,10 @@ type RecipeSpec struct {
 	// Replicas is the number of replicas to run
 	Replicas int32 `json:"replicas,omitempty"`
 
+	// Resources to set for Level 3 and 5.
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// Hpa specifies the pod autoscaling configuration to use
 	// for the workload.
 	// +optional
@@ -49,15 +53,15 @@ type HpaSpec struct {
 	// +optional
 	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 	// +optional
-	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
-	// +optional
 	// TargetMemoryUtilization sets the target average memory utilization across all replicas
 	TargetMemoryUtilization *int32 `json:"targetMemoryUtilization,omitempty"`
 }
+
 // RecipeStatus defines the observed state of Recipe
 type RecipeStatus struct {
 	MySQLStatus     string `json:"mysqlStatus,omitempty"`
 	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
+	RecipeAppHpa    string `json:"recipeAppHpa,omitempty"`
 }
 
 //+kubebuilder:object:root=true

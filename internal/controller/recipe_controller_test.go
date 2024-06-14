@@ -74,8 +74,8 @@ var _ = Describe("Recipe controller", func() {
 						Namespace: namespace.Name,
 					},
 					Spec: devconfczv1alpha1.RecipeSpec{
-						Replicas:   1,
-						Version: "v13",
+						Replicas: 1,
+						Version:  "v13",
 					},
 				}
 
