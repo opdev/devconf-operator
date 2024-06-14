@@ -30,7 +30,7 @@ Clone the workshop's repository to get easy access to instructions, snippets and
 ```shell
 $ echo "export WORKSHOP_REPO=~/workshop_repo" >> ~/.bashrc
 $ . ~/.bashrc
-$ git clone https://github.com/mgoerens/devconf-operator.git ${WORKSHOP_REPO}
+$ git clone https://github.com/opdev/devconf-operator.git ${WORKSHOP_REPO}
 ```
 
 ## Prepare local folder
