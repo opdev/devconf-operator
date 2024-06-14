@@ -33,7 +33,7 @@ var secContext = &corev1.SecurityContext{
 
 var databaseImage = "image-registry.openshift-image-registry.svc:5000/openshift/mysql@sha256:8e9a6595ac9aec17c62933d3b5ecc78df8174a6c2ff74c7f602235b9aef0a340"
 
-func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+func MysqlDeploymentForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	if recipe.Spec.Database.PodSecurityContext != nil {
 		podSecContext = *recipe.Spec.Database.PodSecurityContext
 	}
@@ -46,27 +46,30 @@ func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.
 	replicas := int32(1)
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql-deployment",
+			Name:      recipe.Name + "-mysql",
 			Namespace: recipe.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "mysql",
+					"app": recipe.Name + "-mysql",
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "mysql",
+						"app": recipe.Name + "-mysql",
 					},
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &podSecContext,
 					Containers: []corev1.Container{{
-						Image:           databaseImage,
-						Name:            "mysql",
+						Image: databaseImage,
+						Name:  "mysql",
+						Args: []string{
+							"--ignore-db-dir=lost+found",
+						},
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Ports: []corev1.ContainerPort{
 							{
@@ -75,20 +78,45 @@ func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.
 						},
 						Env: []corev1.EnvVar{
 							{
-								Name:  "MYSQL_ROOT_PASSWORD",
-								Value: "rootpassword",
-							},
-							{
-								Name:  "MYSQL_DATABASE",
-								Value: "recipes",
-							},
-							{
-								Name:  "MYSQL_PASSWORD",
-								Value: "recipepassword",
-							},
-							{
-								Name:  "MYSQL_USER",
-								Value: "recipeuser",
+								Name: "MYSQL_DATABASE",
+								ValueFrom: &corev1.EnvVarSource{
+									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: recipe.Name + "-mysql-config",
+										},
+										Key: "MYSQL_DATABASE",
+									},
+								},
+							}, {
+								Name: "MYSQL_USER",
+								ValueFrom: &corev1.EnvVarSource{
+									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: recipe.Name + "-mysql-config",
+										},
+										Key: "MYSQL_USER",
+									},
+								},
+							}, {
+								Name: "MYSQL_PASSWORD",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: recipe.Name + "-mysql",
+										},
+										Key: "MYSQL_PASSWORD",
+									},
+								},
+							}, {
+								Name: "MYSQL_ROOT_PASSWORD",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: recipe.Name + "-mysql",
+										},
+										Key: "MYSQL_ROOT_PASSWORD",
+									},
+								},
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
@@ -108,7 +136,7 @@ func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.
 							Name: "mysql-persistent-storage",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: "mysql",
+									ClaimName: recipe.Name + "-mysql",
 								},
 							},
 						},
@@ -116,7 +144,7 @@ func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "mysql-initdb-config",
+										Name: recipe.Name + "-mysql-initdb-config",
 									},
 								},
 							},
