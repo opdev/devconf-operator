@@ -30,6 +30,7 @@ import (
 
 	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
 	resources "github.com/opdev/devconf-operator/internal/resources"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 )
 
 // recipeReconciler reconciles a recipe object
@@ -256,10 +257,10 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	} else if err != nil {
 		log.Error(err, "Failed to get Deployment")
 		return ctrl.Result{}, err
-	} else if *found.Spec.Replicas != recipe.Spec.Count {
+	} else if *found.Spec.Replicas != recipe.Spec.Replicas {
 		// Update the Recipe deployment if the number of replicas does not match the desired state
-		log.Info("Updating Recipe Deployment replicas", "Current", *found.Spec.Replicas, "Desired", recipe.Spec.Count)
-		found.Spec.Replicas = &recipe.Spec.Count
+		log.Info("Updating Recipe Deployment replicas", "Current", *found.Spec.Replicas, "Desired", recipe.Spec.Replicas)
+		found.Spec.Replicas = &recipe.Spec.Replicas
 		err = r.Update(ctx, found)
 		if err != nil {
 			log.Error(err, "Failed to update Recipe Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
@@ -309,5 +310,6 @@ func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devconfczv1alpha1.Recipe{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Complete(r)
 }
