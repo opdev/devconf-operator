@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,11 +48,10 @@ type HpaSpec struct {
 	// +optional
 	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 	// +optional
-	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
-	// +optional
 	// TargetMemoryUtilization sets the target average memory utilization across all replicas
 	TargetMemoryUtilization *int32 `json:"targetMemoryUtilization,omitempty"`
 }
+
 // RecipeStatus defines the observed state of Recipe
 type RecipeStatus struct {
 	MySQLStatus     string `json:"mysqlStatus,omitempty"`

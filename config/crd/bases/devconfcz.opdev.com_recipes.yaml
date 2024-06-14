@@ -39,7 +39,29 @@ spec:
           spec:
             description: RecipeSpec defines the desired state of Recipe
             properties:
-              count:
+              hpa:
+                description: |-
+                  Hpa specifies the pod autoscaling configuration to use
+                  for the workload.
+                properties:
+                  maxReplicas:
+                    description: MaxReplicas sets an upper bound to the autoscaling
+                      feature. If MaxReplicas is set autoscaling is enabled.
+                    format: int32
+                    type: integer
+                  minReplicas:
+                    description: MinReplicas sets a lower bound to the autoscaling
+                      feature.  Set this if your are using autoscaling. It must be
+                      at least 1
+                    format: int32
+                    type: integer
+                  targetMemoryUtilization:
+                    description: TargetMemoryUtilization sets the target average memory
+                      utilization across all replicas
+                    format: int32
+                    type: integer
+                type: object
+              replicas:
                 description: Replicas is the number of replicas to run
                 format: int32
                 type: integer
@@ -51,6 +73,8 @@ spec:
             description: RecipeStatus defines the observed state of Recipe
             properties:
               mysqlStatus:
+                type: string
+              recipeAppHpa:
                 type: string
               recipeAppStatus:
                 type: string
