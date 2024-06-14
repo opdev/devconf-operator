@@ -11,12 +11,14 @@ index b078298..22fa021 100644
  # Build
  # the GOARCH has not a default value to allow the binary be built according to the host where the command
 diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
-index 72c9d42..72b4bc5 100644
+index 72c9d42..82ccb34 100644
 --- a/internal/controller/recipe_controller.go
 +++ b/internal/controller/recipe_controller.go
-@@ -19,15 +19,19 @@ package controller
+@@ -18,16 +18,22 @@ package controller
+ 
  import (
  	"context"
++	"fmt"
  
 +	appsv1 "k8s.io/api/apps/v1"
 +	corev1 "k8s.io/api/core/v1"
@@ -35,13 +37,11 @@ index 72c9d42..72b4bc5 100644
  type RecipeReconciler struct {
  	client.Client
  	Scheme *runtime.Scheme
-@@ -36,11 +40,15 @@ type RecipeReconciler struct {
+@@ -36,11 +42,13 @@ type RecipeReconciler struct {
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes,verbs=get;list;watch;create;update;patch;delete
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/status,verbs=get;update;patch
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
 +//+kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=*
-+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors;prometheusrule,verbs=*
-+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 +//+kubebuilder:rbac:groups="",resources=configmaps;endpoints;events;persistentvolumeclaims;pods;namespaces;secrets;serviceaccounts;services;services/finalizers,verbs=*
  
  // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -52,11 +52,12 @@ index 72c9d42..72b4bc5 100644
  // perform operations to make the cluster state reflect the state specified by
  // the user.
  //
-@@ -48,8 +56,227 @@ type RecipeReconciler struct {
+@@ -48,8 +56,241 @@ type RecipeReconciler struct {
  // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
  func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
  	_ = log.FromContext(ctx)
 +	log := log.FromContext(ctx)
++	imagename := "quay.io/opdev/recipe_app"
  
 -	// TODO(user): your logic here
 +	// get an instance of the recipe object
@@ -73,14 +74,14 @@ index 72c9d42..72b4bc5 100644
 +		log.Error(err, "Failed to get recipe")
 +		return ctrl.Result{}, err
 +	}
++
 +	// Define a new ConfigMap object for initdbconfigmap mysql database
-+	mysqlInitDBConfigMap, err := resources.MySQLInitDBConfigMapForrecipe(recipe, r.Scheme)
++	mysqlInitDBConfigMap, err := resources.MySQLInitDBConfigMapForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		return ctrl.Result{}, err
 +	}
 +	// Check if the InitDB ConfigMap already exists
-+	foundMysqlInitDBConfigMap := &corev1.ConfigMap{}
-+	err = r.Get(ctx, client.ObjectKey{Name: mysqlInitDBConfigMap.Name, Namespace: mysqlInitDBConfigMap.Namespace}, foundMysqlInitDBConfigMap)
++	err = r.Get(ctx, client.ObjectKey{Name: mysqlInitDBConfigMap.Name, Namespace: mysqlInitDBConfigMap.Namespace}, &corev1.ConfigMap{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		log.Info("Creating a new ConfigMap for mysql database initialization")
 +		err = r.Create(ctx, mysqlInitDBConfigMap)
@@ -96,13 +97,12 @@ index 72c9d42..72b4bc5 100644
 +	}
 +
 +	// Define a new ConfigMap object for mysql database
-+	mysqlConfigMap, err := resources.MySQLConfigMapForrecipe(recipe, r.Scheme)
++	mysqlConfigMap, err := resources.MySQLConfigMapForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		return ctrl.Result{}, err
 +	}
 +	// Check if the ConfigMap already exists
-+	foundMySQLConfigMap := &corev1.ConfigMap{}
-+	err = r.Get(ctx, client.ObjectKey{Name: mysqlConfigMap.Name, Namespace: mysqlConfigMap.Namespace}, foundMySQLConfigMap)
++	err = r.Get(ctx, client.ObjectKey{Name: mysqlConfigMap.Name, Namespace: mysqlConfigMap.Namespace}, &corev1.ConfigMap{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		log.Info("Creating a new MySQL ConfigMap", "ConfigMap.Namespace", mysqlConfigMap.Namespace, "ConfigMap.Name", mysqlConfigMap.Name)
 +		err = r.Create(ctx, mysqlConfigMap)
@@ -115,15 +115,35 @@ index 72c9d42..72b4bc5 100644
 +		return ctrl.Result{}, err
 +	}
 +
++	// Define a new Secret object for mysql database
++	mysqlSecret, err := resources.MySQLSecretForRecipe(recipe, r.Scheme)
++	if err != nil {
++		return ctrl.Result{}, err
++	}
++	// Check if the Secret already exists
++	err = r.Get(ctx, client.ObjectKey{Name: mysqlSecret.Name, Namespace: mysqlSecret.Namespace}, &corev1.Secret{})
++	if err != nil && apierrors.IsNotFound(err) {
++		log.Info("Creating a new Secret for mysql")
++		err = r.Create(ctx, mysqlSecret)
++		if err != nil {
++			log.Error(err, "Failed to create new Secret for mysql database initialization", "Secret.Namespace", mysqlSecret.Namespace, "Secret.Name", mysqlSecret.Name)
++			return ctrl.Result{}, err
++		}
++		// Secret created successfully - return and requeue
++		return ctrl.Result{Requeue: true}, nil
++	} else if err != nil {
++		log.Error(err, "Failed to get Secret for mysql database initialization")
++		return ctrl.Result{}, err
++	}
++
 +	// Define a new service object for recipe application
-+	service, err := resources.RecipeServiceForrecipe(recipe, r.Scheme)
++	service, err := resources.RecipeServiceForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		log.Error(err, "Failed to define new service resource for recipe application")
 +		return ctrl.Result{}, err
 +	}
 +	// Check if the service already exists
-+	foundService := &corev1.Service{}
-+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
++	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, &corev1.Service{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		log.Info("Creating a new service for recipe application")
 +		err = r.Create(ctx, service)
@@ -139,14 +159,13 @@ index 72c9d42..72b4bc5 100644
 +	}
 +
 +	// Define a new service object for mysql database
-+	service, err = resources.MySQLServiceForrecipe(recipe, r.Scheme)
++	service, err = resources.MySQLServiceForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		log.Error(err, "Failed to define new service resource for mysql database")
 +		return ctrl.Result{}, err
 +	}
 +	// Check if the service already exists
-+	foundService = &corev1.Service{}
-+	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, foundService)
++	err = r.Get(ctx, client.ObjectKey{Name: service.Name, Namespace: service.Namespace}, &corev1.Service{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		log.Info("Creating a new service resource for mysql database")
 +		err = r.Create(ctx, service)
@@ -162,14 +181,13 @@ index 72c9d42..72b4bc5 100644
 +	}
 +
 +	// Define a new persistent volume claim object
-+	pvc, err := resources.PersistentVolumeClaimForrecipe(recipe, r.Scheme)
++	pvc, err := resources.PersistentVolumeClaimForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		log.Error(err, "Failed to define PVC for recipe")
 +		return ctrl.Result{}, err
 +	}
 +	// Check if the PVC already exists
-+	foundPVC := &corev1.PersistentVolumeClaim{}
-+	err = r.Get(ctx, client.ObjectKey{Name: pvc.Name, Namespace: pvc.Namespace}, foundPVC)
++	err = r.Get(ctx, client.ObjectKey{Name: pvc.Name, Namespace: pvc.Namespace}, &corev1.PersistentVolumeClaim{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		log.Info("Creating a new PVC")
 +		err = r.Create(ctx, pvc)
@@ -185,15 +203,14 @@ index 72c9d42..72b4bc5 100644
 +	}
 +
 +	// Define a new mysql database Deployment object
-+	dep, err := resources.MysqlDeploymentForrecipe(recipe, r.Scheme)
++	dep, err := resources.MysqlDeploymentForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		log.Error(err, "Failed to define new mysql deployment resource for recipe")
 +		return ctrl.Result{}, err
 +	}
 +
 +	// Check if the Mysql database Deployment already exists
-+	found := &appsv1.Deployment{}
-+	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
++	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, &appsv1.Deployment{})
 +	if err != nil && apierrors.IsNotFound(err) {
 +		// Update status for MySQL Deployment
 +		recipe.Status.MySQLStatus = "Creating..."
@@ -220,21 +237,18 @@ index 72c9d42..72b4bc5 100644
 +		recipe.Status.MySQLStatus = "Failed"
 +		return ctrl.Result{}, err
 +	}
-+	// mysql database Deployment already exists - don't requeue
-+	log.Info("Skip reconcile: mysql database deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 +
 +	// Define a new recipe app deployment object
-+	dep, err = resources.DeploymentForRecipeApp(recipe, r.Scheme)
++	dep, err = resources.DeploymentForRecipe(recipe, r.Scheme)
 +	if err != nil {
 +		log.Error(err, "Failed to define new Deployment resource for recipe")
 +		return ctrl.Result{}, err
 +	}
 +
 +	// Check if the Deployment already exists
-+	found = &appsv1.Deployment{}
++	found := &appsv1.Deployment{}
 +	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
 +	if err != nil && apierrors.IsNotFound(err) {
-+
 +		log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 +		err = r.Create(ctx, dep)
 +		if err != nil {
@@ -255,16 +269,19 @@ index 72c9d42..72b4bc5 100644
 +	} else if err != nil {
 +		log.Error(err, "Failed to get Deployment")
 +		return ctrl.Result{}, err
-+	} else if *found.Spec.Replicas != recipe.Spec.Count {
++	} else if *found.Spec.Replicas != recipe.Spec.Replicas {
 +		// Update the Recipe deployment if the number of replicas does not match the desired state
-+		log.Info("Updating Recipe Deployment replicas", "Current", *found.Spec.Replicas, "Desired", recipe.Spec.Count)
-+		found.Spec.Replicas = &recipe.Spec.Count
++		log.Info("Updating Recipe Deployment replicas", "Current", *found.Spec.Replicas, "Desired", recipe.Spec.Replicas)
++		found.Spec.Replicas = &recipe.Spec.Replicas
 +		err = r.Update(ctx, found)
 +		if err != nil {
 +			log.Error(err, "Failed to update Recipe Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 +			return ctrl.Result{}, err
 +		}
 +	}
++
++	// If the Deployment already exists and the size is the same, then do nothing
++	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 +
 +	// Update status for MySQL Deployment
 +	recipe.Status.MySQLStatus = "Created"
@@ -275,25 +292,23 @@ index 72c9d42..72b4bc5 100644
 +		log.Error(err, "Failed to update recipe status")
 +		return ctrl.Result{}, err
 +	}
-+
-+	// If the Deployment already exists and the size is the same, then do nothing
-+	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
  
  	return ctrl.Result{}, nil
  }
-@@ -58,5 +285,6 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+@@ -58,5 +299,7 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
  func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
  	return ctrl.NewControllerManagedBy(mgr).
  		For(&devconfczv1alpha1.Recipe{}).
 +		Owns(&appsv1.Deployment{}).
++		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
  		Complete(r)
  }
 diff --git a/internal/resources/configmap.go b/internal/resources/configmap.go
 new file mode 100644
-index 0000000..b82ac75
+index 0000000..87c49c1
 --- /dev/null
 +++ b/internal/resources/configmap.go
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,53 @@
 +package resources
 +
 +import (
@@ -304,20 +319,18 @@ index 0000000..b82ac75
 +	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 +)
 +
-+// MySQLConfigMapForrecipe creates a ConfigMap for MySQL configuration
-+func MySQLConfigMapForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
++// MySQLConfigMapForRecipe creates a ConfigMap for MySQL configuration
++func MySQLConfigMapForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
 +	configMap := &corev1.ConfigMap{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "mysql-config",
++			Name:      recipe.Name + "-mysql-config",
 +			Namespace: recipe.Namespace,
 +		},
 +		Data: map[string]string{
-+			"DB_HOST":             "mysql",
-+			"DB_PORT":             "3306",
-+			"MYSQL_DATABASE":      "recipes",
-+			"MYSQL_USER":          "recipeuser",
-+			"MYSQL_PASSWORD":      "recipepassword",
-+			"MYSQL_ROOT_PASSWORD": "rootpassword",
++			"DB_HOST":        recipe.Name + "-mysql",
++			"DB_PORT":        "3306",
++			"MYSQL_DATABASE": "recipes",
++			"MYSQL_USER":     "recipeuser",
 +		},
 +	}
 +
@@ -328,11 +341,11 @@ index 0000000..b82ac75
 +	return configMap, nil
 +}
 +
-+// MySQLInitDBConfigMapForrecipe creates a ConfigMap for MySQL initialization
-+func MySQLInitDBConfigMapForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
++// MySQLInitDBConfigMapForRecipe creates a ConfigMap for MySQL initialization
++func MySQLInitDBConfigMapForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
 +	configMap := &corev1.ConfigMap{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "mysql-initdb-config",
++			Name:      recipe.Name + "-mysql-initdb-config",
 +			Namespace: recipe.Namespace,
 +		},
 +		Data: map[string]string{
@@ -351,10 +364,10 @@ index 0000000..b82ac75
 +}
 diff --git a/internal/resources/deployment.go b/internal/resources/deployment.go
 new file mode 100644
-index 0000000..d94f9b3
+index 0000000..b54c5ea
 --- /dev/null
 +++ b/internal/resources/deployment.go
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,141 @@
 +package resources
 +
 +import (
@@ -366,9 +379,38 @@ index 0000000..d94f9b3
 +	ctrl "sigs.k8s.io/controller-runtime"
 +)
 +
-+func DeploymentForRecipeApp(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
++var deployPodSecContext = corev1.PodSecurityContext{
++	RunAsNonRoot: &[]bool{true}[0],
++	SeccompProfile: &corev1.SeccompProfile{
++		Type: corev1.SeccompProfileTypeRuntimeDefault,
++	},
++}
 +
-+	replicas := recipe.Spec.Count
++var deploySecContext = &corev1.SecurityContext{
++	// WARNING: Ensure that the image used defines an UserID in the Dockerfile
++	// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
++	// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
++	// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
++	// RunAsUser fields empty.
++	RunAsNonRoot:             &[]bool{true}[0],
++	AllowPrivilegeEscalation: &[]bool{false}[0],
++	Capabilities: &corev1.Capabilities{
++		Drop: []corev1.Capability{
++			"ALL",
++		},
++	},
++}
++
++func DeploymentForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
++	if recipe.Spec.PodSecurityContext != nil {
++		deployPodSecContext = *recipe.Spec.PodSecurityContext
++	}
++
++	if recipe.Spec.SecurityContext != nil {
++		deploySecContext = recipe.Spec.SecurityContext
++	}
++
++	replicas := recipe.Spec.Replicas
 +	version := recipe.Spec.Version
 +	image := "quay.io/opdev/recipe_app:" + version
 +
@@ -381,22 +423,17 @@ index 0000000..d94f9b3
 +			Replicas: &replicas,
 +			Selector: &metav1.LabelSelector{
 +				MatchLabels: map[string]string{
-+					"app": "recipe-app",
++					"app": recipe.Name,
 +				},
 +			},
 +			Template: corev1.PodTemplateSpec{
 +				ObjectMeta: metav1.ObjectMeta{
 +					Labels: map[string]string{
-+						"app": "recipe-app",
++						"app": recipe.Name,
 +					},
 +				},
 +				Spec: corev1.PodSpec{
-+					SecurityContext: &corev1.PodSecurityContext{
-+						RunAsNonRoot: &[]bool{true}[0],
-+						SeccompProfile: &corev1.SeccompProfile{
-+							Type: corev1.SeccompProfileTypeRuntimeDefault,
-+						},
-+					},
++					SecurityContext: &deployPodSecContext,
 +					Containers: []corev1.Container{{
 +						Image:           image,
 +						Name:            "recipe-app",
@@ -413,64 +450,54 @@ index 0000000..d94f9b3
 +								ValueFrom: &corev1.EnvVarSource{
 +									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 +										LocalObjectReference: corev1.LocalObjectReference{
-+											Name: "mysql-config",
++											Name: recipe.Name + "-mysql-config",
 +										},
 +										Key: "DB_HOST",
 +									},
 +								},
-+							},
-+							{
++							}, {
 +								Name: "DB_PORT",
 +								ValueFrom: &corev1.EnvVarSource{
 +									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 +										LocalObjectReference: corev1.LocalObjectReference{
-+											Name: "mysql-config",
++											Name: recipe.Name + "-mysql-config",
 +										},
 +										Key: "DB_PORT",
 +									},
 +								},
-+							},
-+							{
++							}, {
 +								Name: "DB_NAME",
 +								ValueFrom: &corev1.EnvVarSource{
 +									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 +										LocalObjectReference: corev1.LocalObjectReference{
-+											Name: "mysql-config",
++											Name: recipe.Name + "-mysql-config",
 +										},
 +										Key: "MYSQL_DATABASE",
 +									},
 +								},
-+							},
-+							{
-+								Name:  "DB_USER",
-+								Value: "recipeuser",
-+							},
-+							{
-+								Name: "DB_PASSWORD",
++							}, {
++								Name: "DB_USER",
 +								ValueFrom: &corev1.EnvVarSource{
 +									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 +										LocalObjectReference: corev1.LocalObjectReference{
-+											Name: "mysql-config",
++											Name: recipe.Name + "-mysql-config",
++										},
++										Key: "MYSQL_USER",
++									},
++								},
++							}, {
++								Name: "DB_PASSWORD",
++								ValueFrom: &corev1.EnvVarSource{
++									SecretKeyRef: &corev1.SecretKeySelector{
++										LocalObjectReference: corev1.LocalObjectReference{
++											Name: recipe.Name + "-mysql",
 +										},
 +										Key: "MYSQL_PASSWORD",
 +									},
 +								},
 +							},
 +						},
-+						SecurityContext: &corev1.SecurityContext{
-+							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
-+							// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
-+							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
-+							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
-+							// RunAsUser fields empty.
-+							RunAsNonRoot:             &[]bool{true}[0],
-+							AllowPrivilegeEscalation: &[]bool{false}[0],
-+							Capabilities: &corev1.Capabilities{
-+								Drop: []corev1.Capability{
-+									"ALL",
-+								},
-+							},
-+						},
++						SecurityContext: deploySecContext,
 +					}},
 +				},
 +			},
@@ -484,10 +511,10 @@ index 0000000..d94f9b3
 +}
 diff --git a/internal/resources/mysqldeployment.go b/internal/resources/mysqldeployment.go
 new file mode 100644
-index 0000000..614eeac
+index 0000000..e0f5886
 --- /dev/null
 +++ b/internal/resources/mysqldeployment.go
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,162 @@
 +package resources
 +
 +import (
@@ -499,37 +526,67 @@ index 0000000..614eeac
 +	ctrl "sigs.k8s.io/controller-runtime"
 +)
 +
-+func MysqlDeploymentForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
++var podSecContext = corev1.PodSecurityContext{
++	RunAsNonRoot: &[]bool{true}[0],
++	SeccompProfile: &corev1.SeccompProfile{
++		Type: corev1.SeccompProfileTypeRuntimeDefault,
++	},
++}
 +
++var secContext = &corev1.SecurityContext{
++	// WARNING: Ensure that the image used defines an UserID in the Dockerfile
++	// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
++	// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
++	// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
++	// RunAsUser fields empty.
++	RunAsNonRoot:             &[]bool{true}[0],
++	AllowPrivilegeEscalation: &[]bool{false}[0],
++	Capabilities: &corev1.Capabilities{
++		Drop: []corev1.Capability{
++			"ALL",
++		},
++	},
++}
++
++var databaseImage = "image-registry.openshift-image-registry.svc:5000/openshift/mysql@sha256:8e9a6595ac9aec17c62933d3b5ecc78df8174a6c2ff74c7f602235b9aef0a340"
++
++func MysqlDeploymentForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*appsv1.Deployment, error) {
++	if recipe.Spec.Database.PodSecurityContext != nil {
++		podSecContext = *recipe.Spec.Database.PodSecurityContext
++	}
++	if recipe.Spec.Database.SecurityContext != nil {
++		secContext = recipe.Spec.Database.SecurityContext
++	}
++	if recipe.Spec.Database.Image != "" {
++		databaseImage = recipe.Spec.Database.Image
++	}
 +	replicas := int32(1)
 +	dep := &appsv1.Deployment{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "mysql-deployment",
++			Name:      recipe.Name + "-mysql",
 +			Namespace: recipe.Namespace,
 +		},
 +		Spec: appsv1.DeploymentSpec{
 +			Replicas: &replicas,
 +			Selector: &metav1.LabelSelector{
 +				MatchLabels: map[string]string{
-+					"app": "mysql",
++					"app": recipe.Name + "-mysql",
 +				},
 +			},
 +			Template: corev1.PodTemplateSpec{
 +				ObjectMeta: metav1.ObjectMeta{
 +					Labels: map[string]string{
-+						"app": "mysql",
++						"app": recipe.Name + "-mysql",
 +					},
 +				},
 +				Spec: corev1.PodSpec{
-+					SecurityContext: &corev1.PodSecurityContext{
-+						RunAsNonRoot: &[]bool{true}[0],
-+						SeccompProfile: &corev1.SeccompProfile{
-+							Type: corev1.SeccompProfileTypeRuntimeDefault,
-+						},
-+					},
++					SecurityContext: &podSecContext,
 +					Containers: []corev1.Container{{
-+						Image:           "image-registry.openshift-image-registry.svc:5000/openshift/mysql@sha256:8e9a6595ac9aec17c62933d3b5ecc78df8174a6c2ff74c7f602235b9aef0a340",
-+						Name:            "mysql",
++						Image: databaseImage,
++						Name:  "mysql",
++						Args: []string{
++							"--ignore-db-dir=lost+found",
++						},
 +						ImagePullPolicy: corev1.PullIfNotPresent,
 +						Ports: []corev1.ContainerPort{
 +							{
@@ -538,20 +595,45 @@ index 0000000..614eeac
 +						},
 +						Env: []corev1.EnvVar{
 +							{
-+								Name:  "MYSQL_ROOT_PASSWORD",
-+								Value: "rootpassword",
-+							},
-+							{
-+								Name:  "MYSQL_DATABASE",
-+								Value: "recipes",
-+							},
-+							{
-+								Name:  "MYSQL_PASSWORD",
-+								Value: "recipepassword",
-+							},
-+							{
-+								Name:  "MYSQL_USER",
-+								Value: "recipeuser",
++								Name: "MYSQL_DATABASE",
++								ValueFrom: &corev1.EnvVarSource{
++									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++										LocalObjectReference: corev1.LocalObjectReference{
++											Name: recipe.Name + "-mysql-config",
++										},
++										Key: "MYSQL_DATABASE",
++									},
++								},
++							}, {
++								Name: "MYSQL_USER",
++								ValueFrom: &corev1.EnvVarSource{
++									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
++										LocalObjectReference: corev1.LocalObjectReference{
++											Name: recipe.Name + "-mysql-config",
++										},
++										Key: "MYSQL_USER",
++									},
++								},
++							}, {
++								Name: "MYSQL_PASSWORD",
++								ValueFrom: &corev1.EnvVarSource{
++									SecretKeyRef: &corev1.SecretKeySelector{
++										LocalObjectReference: corev1.LocalObjectReference{
++											Name: recipe.Name + "-mysql",
++										},
++										Key: "MYSQL_PASSWORD",
++									},
++								},
++							}, {
++								Name: "MYSQL_ROOT_PASSWORD",
++								ValueFrom: &corev1.EnvVarSource{
++									SecretKeyRef: &corev1.SecretKeySelector{
++										LocalObjectReference: corev1.LocalObjectReference{
++											Name: recipe.Name + "-mysql",
++										},
++										Key: "MYSQL_ROOT_PASSWORD",
++									},
++								},
 +							},
 +						},
 +						VolumeMounts: []corev1.VolumeMount{
@@ -564,27 +646,14 @@ index 0000000..614eeac
 +								MountPath: "/docker-entrypoint-initdb.d",
 +							},
 +						},
-+						SecurityContext: &corev1.SecurityContext{
-+							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
-+							// otherwise the Pod will not run and will fail with `container has runAsNonRoot and image has non-numeric user`.
-+							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
-+							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the `RunAsNonRoot` and
-+							// RunAsUser fields empty.
-+							RunAsNonRoot:             &[]bool{true}[0],
-+							AllowPrivilegeEscalation: &[]bool{false}[0],
-+							Capabilities: &corev1.Capabilities{
-+								Drop: []corev1.Capability{
-+									"ALL",
-+								},
-+							},
-+						},
++						SecurityContext: secContext,
 +					}},
 +					Volumes: []corev1.Volume{
 +						{
 +							Name: "mysql-persistent-storage",
 +							VolumeSource: corev1.VolumeSource{
 +								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-+									ClaimName: "mysql",
++									ClaimName: recipe.Name + "-mysql",
 +								},
 +							},
 +						},
@@ -592,7 +661,7 @@ index 0000000..614eeac
 +							VolumeSource: corev1.VolumeSource{
 +								ConfigMap: &corev1.ConfigMapVolumeSource{
 +									LocalObjectReference: corev1.LocalObjectReference{
-+										Name: "mysql-initdb-config",
++										Name: recipe.Name + "-mysql-initdb-config",
 +									},
 +								},
 +							},
@@ -610,7 +679,7 @@ index 0000000..614eeac
 +}
 diff --git a/internal/resources/pvc.go b/internal/resources/pvc.go
 new file mode 100644
-index 0000000..ae579f4
+index 0000000..a3ef934
 --- /dev/null
 +++ b/internal/resources/pvc.go
 @@ -0,0 +1,37 @@
@@ -625,11 +694,11 @@ index 0000000..ae579f4
 +	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 +)
 +
-+// PersistentVolumeClaimForrecipe creates a PVC for MySQL and sets the owner reference
-+func PersistentVolumeClaimForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
++// PersistentVolumeClaimForRecipe creates a PVC for MySQL and sets the owner reference
++func PersistentVolumeClaimForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
 +	pvc := &corev1.PersistentVolumeClaim{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "mysql",
++			Name:      recipe.Name + "-mysql",
 +			Namespace: recipe.Namespace,
 +		},
 +		Spec: corev1.PersistentVolumeClaimSpec{
@@ -651,9 +720,44 @@ index 0000000..ae579f4
 +
 +	return pvc, nil
 +}
+diff --git a/internal/resources/secret.go b/internal/resources/secret.go
+new file mode 100644
+index 0000000..be939ea
+--- /dev/null
++++ b/internal/resources/secret.go
+@@ -0,0 +1,29 @@
++package resources
++
++import (
++	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
++)
++
++// MySQLSecretForRecipe creates a ConfigMap for MySQL configuration
++func MySQLSecretForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Secret, error) {
++	secret := &corev1.Secret{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      recipe.Name + "-mysql",
++			Namespace: recipe.Namespace,
++		},
++		StringData: map[string]string{
++			"MYSQL_PASSWORD":      "recipepassword",
++			"MYSQL_ROOT_PASSWORD": "rootpassword",
++		},
++	}
++
++	if err := ctrl.SetControllerReference(recipe, secret, scheme); err != nil {
++		return nil, err
++	}
++
++	return secret, nil
++}
 diff --git a/internal/resources/service.go b/internal/resources/service.go
 new file mode 100644
-index 0000000..662adf0
+index 0000000..e159c17
 --- /dev/null
 +++ b/internal/resources/service.go
 @@ -0,0 +1,66 @@
@@ -668,11 +772,11 @@ index 0000000..662adf0
 +	ctrl "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 +)
 +
-+// MySQLServiceForrecipe creates a Service for the MySQL Deployment and sets the owner reference
-+func MySQLServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
++// MySQLServiceForRecipe creates a Service for the MySQL Deployment and sets the owner reference
++func MySQLServiceForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
 +	service := &corev1.Service{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "mysql",
++			Name:      recipe.Name + "-mysql",
 +			Namespace: recipe.Namespace,
 +		},
 +		Spec: corev1.ServiceSpec{
@@ -682,7 +786,7 @@ index 0000000..662adf0
 +				},
 +			},
 +			Selector: map[string]string{
-+				"app": "mysql",
++				"app": recipe.Name + "-mysql",
 +			},
 +		},
 +	}
@@ -695,16 +799,16 @@ index 0000000..662adf0
 +	return service, nil
 +}
 +
-+// RecipeServiceForrecipe creates a Service for the Recipe application and sets the owner reference
-+func RecipeServiceForrecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
++// RecipeServiceForRecipe creates a Service for the Recipe application and sets the owner reference
++func RecipeServiceForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*corev1.Service, error) {
 +	service := &corev1.Service{
 +		ObjectMeta: metav1.ObjectMeta{
-+			Name:      "recipe-app-service",
++			Name:      recipe.Name,
 +			Namespace: recipe.Namespace,
 +		},
 +		Spec: corev1.ServiceSpec{
 +			Selector: map[string]string{
-+				"app": "recipe-app",
++				"app": recipe.Name,
 +			},
 +			Ports: []corev1.ServicePort{
 +				{

@@ -1,8 +1,16 @@
 diff --git a/api/v1alpha1/recipe_types.go b/api/v1alpha1/recipe_types.go
-index 265c10b..461959b 100644
+index 265c10b..ecb4edb 100644
 --- a/api/v1alpha1/recipe_types.go
 +++ b/api/v1alpha1/recipe_types.go
-@@ -28,14 +28,17 @@ type RecipeSpec struct {
+@@ -17,6 +17,7 @@ limitations under the License.
+ package v1alpha1
+ 
+ import (
++	corev1 "k8s.io/api/core/v1"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ )
+ 
+@@ -28,14 +29,41 @@ type RecipeSpec struct {
  	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
  	// Important: Run "make" to regenerate code after modifying this file
  
@@ -12,7 +20,31 @@ index 265c10b..461959b 100644
 +	Version string `json:"version,omitempty"`
 +
 +	// Replicas is the number of replicas to run
-+	Count int32 `json:"count,omitempty"`
++	Replicas int32 `json:"replicas,omitempty"`
++
++	// PodSecurityContext in case of Openshift
++	// +optional
++	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
++	// SecurityContext in case of Openshift
++	// +optional
++	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
++
++	// Database specifies the database configuration to use
++	// for the workload.
++	// +optional
++	Database DatabaseSpec `json:"database,omitempty"`
++}
++
++type DatabaseSpec struct {
++	// Image set the image which should be used at MySQL DB.
++	// +optional
++	Image string `json:"image,omitempty"`
++	// PodSecurityContext in case of Openshift
++	// +optional
++	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
++	// SecurityContext in case of Openshift
++	// +optional
++	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
  }
  
  // RecipeStatus defines the observed state of Recipe

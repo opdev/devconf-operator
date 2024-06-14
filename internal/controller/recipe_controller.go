@@ -250,7 +250,6 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	found := &appsv1.Deployment{}
 	err = r.Get(ctx, client.ObjectKey{Name: dep.Name, Namespace: dep.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
-
 		log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.Create(ctx, dep)
 		if err != nil {
@@ -281,6 +280,10 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, err
 		}
 	}
+
+	// If the Deployment already exists and the size is the same, then do nothing
+	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+
 
 	// Level 2: Update Operand (Recipe App)
 	log.Info("Reconciling Recipe App version")
@@ -317,9 +320,6 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		log.Error(err, "Failed to update recipe status")
 		return ctrl.Result{}, err
 	}
-
-	// If the Deployment already exists and the size is the same, then do nothing
-	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
 	hpa, err := resources.AutoScaler(recipe, r.Scheme)
 	if err != nil {

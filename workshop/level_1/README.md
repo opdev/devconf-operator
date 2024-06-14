@@ -8,6 +8,7 @@ Use `operator-sdk create api` command to scaffold the Recipe API and its associa
 
 ```shell
 $ operator-sdk create api --group devconfcz --version v1alpha1 --kind Recipe --resource --controller
+$ make manifests
 ```
 
 # Edit the Recipe resource
@@ -18,7 +19,6 @@ Use our provided patch for customizing the Recipe resource definition:
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0001-recipe-type.patch
 patching file api/v1alpha1/recipe_types.go
 $ make manifests
-/home/ec2-user/devconf-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 ```
 
 # Add code to provision child resources
@@ -37,13 +37,14 @@ We create a `internal/resources/` subfolder to host the child resources definiti
 
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0002-child-resources.patch
-patching file internal/controller/recipe_controller.go
-patching file internal/resources/resources/configmap.go
-patching file internal/resources/resources/deployment.go
-patching file internal/resources/resources/mysqldeployment.go
-patching file internal/resources/resources/pvc.go
-patching file internal/resources/resources/service.go
 patching file Dockerfile
+patching file internal/controller/recipe_controller.go
+patching file internal/resources/configmap.go
+patching file internal/resources/deployment.go
+patching file internal/resources/mysqldeployment.go
+patching file internal/resources/pvc.go
+patching file internal/resources/secret.go
+patching file internal/resources/service.go
 $ make manifests
 ```
 
@@ -72,3 +73,9 @@ $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0003-example-recip
 $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
 
+# To go further...
+
+* Watch for resource modifications
+* Adopt the subreconciler pattern
+
+## [Onto Level 2...](../level_2/)
