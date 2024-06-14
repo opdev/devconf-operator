@@ -16,7 +16,7 @@ func MySQLConfigMapForRecipe(recipe *devconfczv1alpha1.Recipe, scheme *runtime.S
 			Namespace: recipe.Namespace,
 		},
 		Data: map[string]string{
-			"DB_HOST":        "mysql",
+			"DB_HOST":        recipe.Name + "-mysql",
 			"DB_PORT":        "3306",
 			"MYSQL_DATABASE": "recipes",
 			"MYSQL_USER":     "recipeuser",
