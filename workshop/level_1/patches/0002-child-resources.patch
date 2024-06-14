@@ -11,14 +11,12 @@ index b078298..22fa021 100644
  # Build
  # the GOARCH has not a default value to allow the binary be built according to the host where the command
 diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
-index 72c9d42..82ccb34 100644
+index 72c9d42..945cfc4 100644
 --- a/internal/controller/recipe_controller.go
 +++ b/internal/controller/recipe_controller.go
-@@ -18,16 +18,22 @@ package controller
- 
+@@ -19,12 +19,16 @@ package controller
  import (
  	"context"
-+	"fmt"
  
 +	appsv1 "k8s.io/api/apps/v1"
 +	corev1 "k8s.io/api/core/v1"
@@ -32,12 +30,8 @@ index 72c9d42..82ccb34 100644
 +	resources "github.com/opdev/devconf-operator/internal/resources"
  )
  
--// RecipeReconciler reconciles a Recipe object
-+// recipeReconciler reconciles a recipe object
- type RecipeReconciler struct {
- 	client.Client
- 	Scheme *runtime.Scheme
-@@ -36,11 +42,13 @@ type RecipeReconciler struct {
+ // RecipeReconciler reconciles a Recipe object
+@@ -36,6 +40,8 @@ type RecipeReconciler struct {
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes,verbs=get;list;watch;create;update;patch;delete
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/status,verbs=get;update;patch
  //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
@@ -46,18 +40,11 @@ index 72c9d42..82ccb34 100644
  
  // Reconcile is part of the main kubernetes reconciliation loop which aims to
  // move the current state of the cluster closer to the desired state.
- // TODO(user): Modify the Reconcile function to compare the state specified by
--// the Recipe object against the actual cluster state, and then
-+// the recipe object against the actual cluster state, and then
- // perform operations to make the cluster state reflect the state specified by
- // the user.
- //
-@@ -48,8 +56,241 @@ type RecipeReconciler struct {
+@@ -48,8 +54,240 @@ type RecipeReconciler struct {
  // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
  func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
  	_ = log.FromContext(ctx)
 +	log := log.FromContext(ctx)
-+	imagename := "quay.io/opdev/recipe_app"
  
 -	// TODO(user): your logic here
 +	// get an instance of the recipe object
@@ -295,12 +282,15 @@ index 72c9d42..82ccb34 100644
  
  	return ctrl.Result{}, nil
  }
-@@ -58,5 +299,7 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+@@ -58,5 +296,10 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
  func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
  	return ctrl.NewControllerManagedBy(mgr).
  		For(&devconfczv1alpha1.Recipe{}).
 +		Owns(&appsv1.Deployment{}).
-+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
++		Owns(&corev1.ConfigMap{}).
++		Owns(&corev1.PersistentVolumeClaim{}).
++		Owns(&appsv1.Secret{}).
++		Owns(&appsv1.Service{}).
  		Complete(r)
  }
 diff --git a/internal/resources/configmap.go b/internal/resources/configmap.go

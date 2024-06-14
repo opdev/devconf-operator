@@ -18,7 +18,7 @@ Use our provided patch for customizing the Recipe resource definition:
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_1/patches/0001-recipe-type.patch
 patching file api/v1alpha1/recipe_types.go
-$ make manifests
+$ make manifests generate
 ```
 
 # Add code to provision child resources
@@ -30,6 +30,7 @@ We're going to have to create the following child resources:
 * For the MySQL database:
   * A Deployment
   * A Service
+  * A Secret
   * A PVC
   * A ConfigMap
 
