@@ -6,6 +6,8 @@ Level 3 is about making backup of the operand data in any stateful data managed 
 In order to achieve a shared disk for our workshop, we have to install a NFS Server with a respective command:
 
 ```shell
+$ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 $ helm repo add nfs-ganesha-server-and-external-provisioner https://kubernetes-sigs.github.io/nfs-ganesha-server-and-external-provisioner
 
 $ helm install nfs-release -f  ${WORKSHOP_REPO}/workshop/level_3/values.yaml nfs-ganesha-server-and-external-provisioner/nfs-server-provisioner
@@ -16,7 +18,7 @@ $ helm install nfs-release -f  ${WORKSHOP_REPO}/workshop/level_3/values.yaml nfs
 Use our provided patch for adding the code to implement application version update support:
 
 ```shell
-$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0001-backup-restore.go
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0001-backup-restore.patch
 patching file api/v1alpha1/recipe_types.go
 patching file internal/controller/recipe_controller.go
 patching file internal/resources/cronjob.go
@@ -30,7 +32,7 @@ $ make manifests
 Include the Backup Policy Specification
 
 ```shell
-$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0002-enable-cron-backup.path
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0002-enable-cron-backup.patch
 patching file config/samples/devconfcz_v1alpha1_recipe.yaml
 $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
