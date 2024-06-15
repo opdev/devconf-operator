@@ -67,6 +67,19 @@ $ oc logs mysql-job-28640006-sd6ht -f
 
 ## Vizualize the backed up data
 
+```shell
+$ oc debug mysql-job-28640006-sd6ht
+Starting pod/mysql-job-28640250-25q4h-debug-v4gbn ...
+Pod IP: 10.128.1.86
+If you don't see a command prompt, try pressing enter.
+/ # ls -al /backup
+total 4
+drwxrwsrwx    2 root     root            70 Jun 15 01:31 .
+dr-xr-xr-x    1 root     root            40 Jun 15 01:31 ..
+-rw-r--r--    1 root     root           866 Jun 15 01:31 202406150131.recipes.sql.gz
+lrwxrwxrwx    1 root     root            27 Jun 15 01:31 latest.recipes.sql.gz -> 202406150131.recipes.sql.gz
+```
+
 ## Simulate outage and test restore
 
 Let's simulate an outage in our namespace:
@@ -97,7 +110,7 @@ Now, as we have cleared the PersistentVolume Status, we should be able to put ba
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0003-enable-restore.patch
 patching file config/samples/devconfcz_v1alpha1_recipe.yaml
-$ oc apply -f samples/config/devconfcz_v1alpha1_recipe.yaml
+$ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
 
 The Restore results should be like the following:
@@ -111,3 +124,5 @@ $ oc logs mysql-restore-job-bwbjq -f
   => Restore succeeded
   => Running cron task manager in foreground
 ```
+
+# [Onto Level 4...](../level_4/)
