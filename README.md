@@ -42,3 +42,4 @@ If you attend the Workshop in presence at DevConf.CZ, you'll be provided with ac
 
 - [Operator Capability Level](https://sdk.operatorframework.io/docs/overview/operator-capabilities/)
 - [Recipe application source code](https://github.com/opdev/devconf-operator/recipe)
+- [Google Drive Link](https://drive.google.com/drive/folders/1swOz_xnEIN0Y8l2Av6x0OpBuJNK7L9Vc?usp=drive_link)
