@@ -3,29 +3,34 @@
 The highest capability level aims to significantly reduce/eliminate any remaining manual intervention in managing the operand. The operator should configure the Operand to auto-scale as load picks up.
 
 
-# Edit the recipe_controller.go
+# Enable level 5 capability
 
-Use our provided patch for adding the code to implement application version update support:
+Use our provided patch for adding an HPA child resource:
 
 ```shell
-$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_5/patches/0001-application-version-update.patch
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_5/patches/0001-hpa.patch
+patching file api/v1alpha1/recipe_types.go
 patching file internal/controller/recipe_controller.go
+patching file internal/resources/hpa.go
+$ make generate manifests
+```
+
+# Test level 5
+
+## Ensure controller process uses latest changes
+
+Stop the Controller (Ctrl+C), install the latest version of the CRD, and restart the controller:
+
+```shell
+make install run
 ```
 
 ## Edit the `Recipe` CR
-Include the Horizontal Pod AutoScaler and the Resources Limits specification.
-```yaml
-hpa:
-  minReplicas: 1
-  maxReplicas: 3
-  targetMemoryUtilization: 60
-resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
-  requests:
-    cpu: 5m
-    memory: 64Mi
+
+```shell
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_5/patches/0002-enable-hpa.patch
+patching file config/samples/devconfcz_v1alpha1_recipe.yaml
+$ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
 
 The Operator will provision a HorizontalPodAutoScaler like that:

@@ -24,7 +24,7 @@ patching file internal/controller/recipe_controller.go
 patching file internal/resources/cronjob.go
 patching file internal/resources/job.go
 patching file internal/resources/pvc.go
-$ make manifests
+$ make generate manifests
 ```
 
 # Test level 3
