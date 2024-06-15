@@ -13,9 +13,9 @@ $ helm repo add nfs-ganesha-server-and-external-provisioner https://kubernetes-s
 $ helm install nfs-release -f  ${WORKSHOP_REPO}/workshop/level_3/values.yaml nfs-ganesha-server-and-external-provisioner/nfs-server-provisioner
 ```
 
-# Edit the recipe_controller.go
+# Enable backup and restore feature
 
-Use our provided patch for adding the code to implement application version update support:
+Use our provided patch for adding the code to implement the backup and restore functionality:
 
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0001-backup-restore.patch
@@ -27,9 +27,19 @@ patching file internal/resources/pvc.go
 $ make manifests
 ```
 
+# Test level 3
+
+## Ensure controller process uses latest changes
+
+Stop the Controller (Ctrl+C), install the latest version of the CRD, and restart the controller:
+
+```shell
+make install run
+```
+
 ## Edit the `Recipe` CR
 
-Include the Backup Policy Specification
+Include the Backup Policy Specification:
 
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0002-enable-cron-backup.patch
@@ -39,7 +49,7 @@ $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 
 You should see the following results after one minute:
 ```shell
-$ kubectl logs mysql-job-28640006-sd6ht -f
+$ oc logs mysql-job-28640006-sd6ht -f
   2024/06/14 21:26:12 Waiting for: tcp://recipe-sample-mysql:3306
   2024/06/14 21:26:17 Connected to tcp://recipe-sample-mysql:3306
   => Running cron task manager in foreground
@@ -53,26 +63,32 @@ $ kubectl logs mysql-job-28640006-sd6ht -f
   => Backup process finished at 2024-06-14 21:28:00
 ```
 
+## Connect to the Recipe UI and add some data
+
+## Vizualize the backed up data
+
+## Simulate outage and test restore
+
 Let's simulate an outage in our namespace:
 ```shell
-$ kubectl delete -f samples/config/devconfcz_v1alpha1_recipe.yaml
+$ oc delete -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
 
 Wait until you see the PersistentVolume Released:
 ```shell
-$ kubectl get pv
+$ oc get pv
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS     CLAIM                          STORAGECLASS   REASON   AGE
 pvc-f22d6d22-72a0-4240-a908-c71a6ddcb6fd   1Gi        RWX            Retain           Released   default/recipe-sample-backup   nfs                     13m
 ```
 
 Let's make the PersistentVolume available again
 ```shell
-$ kubectl patch pv pvc-f22d6d22-72a0-4240-a908-c71a6ddcb6fd -p '{"spec":{"claimRef": null}}'
+$ oc patch pv pvc-f22d6d22-72a0-4240-a908-c71a6ddcb6fd -p '{"spec":{"claimRef": null}}'
 ```
 
 The PersistVolPersistentVolumeume should present an Available status:
 ```shell
-$ kubectl get pv
+$ oc get pv
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
 pvc-f22d6d22-72a0-4240-a908-c71a6ddcb6fd   1Gi        RWX            Retain           Available   /       nfs
 ```
@@ -81,13 +97,13 @@ Now, as we have cleared the PersistentVolume Status, we should be able to put ba
 ```shell
 $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_3/patches/0003-enable-restore.patch
 patching file config/samples/devconfcz_v1alpha1_recipe.yaml
-$ kubectl apply -f samples/config/devconfcz_v1alpha1_recipe.yaml
+$ oc apply -f samples/config/devconfcz_v1alpha1_recipe.yaml
 ```
 
 The Restore results should be like the following:
 
 ```shell
-$ kubectl logs mysql-restore-job-bwbjq -f
+$ oc logs mysql-restore-job-bwbjq -f
   2024/06/14 21:50:44 Connected to tcp://  recipe-sample-mysql:3306
   => Restore latest backup
   => Searching database name in /backup/202406142150.  recipes.sql.gz

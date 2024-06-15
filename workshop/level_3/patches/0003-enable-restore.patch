@@ -3,7 +3,7 @@ index 6cda10d..7fb1514 100644
 --- a/config/samples/devconfcz_v1alpha1_recipe.yaml
 +++ b/config/samples/devconfcz_v1alpha1_recipe.yaml
 @@ -19,3 +19,4 @@ spec:
-     volumeName: "-backup"
-     schedule: "*/1 * * * *"
-     timezone: "Europe/Berlin"
-+  initRestore: true
+       volumeName: "-backup"
+       schedule: "*/1 * * * *"
+       timezone: "Europe/Berlin"
++    initRestore: true
