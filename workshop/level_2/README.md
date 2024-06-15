@@ -23,3 +23,5 @@ $ make run
 ```shell
 $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 ```
+
+# [Onto Level 3...](../level_3/)

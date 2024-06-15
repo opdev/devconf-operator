@@ -29,6 +29,11 @@ $ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_4/patches/0001-add_metrics.p
 
 ## Now we can build the controller
 #### - In the Makefile, change docker to podman
+
+```shell
+$ patch --strip=1 < ${WORKSHOP_REPO}/workshop/level_4/patches/0002-docker-to-podman.patch
+```
+
 #### - Build and push the Operator Container image to an image repository
 
 ```shell
@@ -37,14 +42,18 @@ $ make docker-build docker-push IMG=quay.io/rocrisp/recipe_operator:3.0.0
 Note: Select Golang from docker.io/library/golang:1.20
 
 ## Install the controller inside the cluster
+
 ```shell
 $ make deploy IMG=quay.io/rocrisp/recipe_operator:3.0.0
 ```
+
 ### Allow the service monitor of the Operator to be scraped by the Prometheus instance of the OpenShift Container Platform cluster.
+
 ```shell
 oc apply -f config/prometheus/role.yaml
 oc apply -f config/prometheus/rolebinding.yaml
 ```
+
 ### Labels the devconf-operator-system namespace to scrape for metrics, which enables OpenShift cluster monitoring for that namespace
 
 ```shell
@@ -53,3 +62,5 @@ $ oc get namespace devconf-operator-system --show-labels
 ```
 
 For reference, https://docs.openshift.com/container-platform/4.15/operators/operator_sdk/osdk-monitoring-prometheus.html
+
+# [Onto Level 5...](../level_5/)

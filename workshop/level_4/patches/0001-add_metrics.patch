@@ -57,7 +57,7 @@ index 0000000..8f6eecf
 +    namespace: openshift-monitoring
 \ No newline at end of file
 diff --git a/go.mod b/go.mod
-index 658400a..49ae39e 100644
+index 9350cf5..9356fa3 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -5,6 +5,7 @@ go 1.20
@@ -65,10 +65,10 @@ index 658400a..49ae39e 100644
  	github.com/onsi/ginkgo/v2 v2.11.0
  	github.com/onsi/gomega v1.27.10
 +	github.com/prometheus/client_golang v1.16.0
- 	k8s.io/api v0.28.3
  	k8s.io/apimachinery v0.28.3
  	k8s.io/client-go v0.28.3
-@@ -41,7 +42,6 @@ require (
+ 	sigs.k8s.io/controller-runtime v0.16.3
+@@ -40,7 +41,6 @@ require (
  	github.com/modern-go/reflect2 v1.0.2 // indirect
  	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
  	github.com/pkg/errors v0.9.1 // indirect
@@ -109,10 +109,10 @@ index 0000000..b8aa839
 +	metrics.Registry.MustRegister(upgrades, upgradesFailures)
 +}
 diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
-index ebab561..20aa3fc 100644
+index dc4aa38..cdf5d97 100644
 --- a/internal/controller/recipe_controller.go
 +++ b/internal/controller/recipe_controller.go
-@@ -281,9 +281,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+@@ -296,9 +296,14 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
  	currentImage := found.Spec.Template.Spec.Containers[0].Image
  
  	if currentImage != desiredImage {
