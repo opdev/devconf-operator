@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen-deployment
+  namespace: default
+  labels:
+    app: loadgen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+      - name: loadgen
+        image: ghcr.io/yuriolisa/loadgen:latest
+        imagePullPolicy: Always
+        env:
+          - name: URL
+            value: "http://recipe-sample:8080/liveness"
