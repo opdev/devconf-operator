@@ -286,7 +286,6 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// If the Deployment already exists and the size is the same, then do nothing
 	log.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
-
 	// Level 2: Update Operand (Recipe App)
 	log.Info("Reconciling Recipe App version")
 	found = &appsv1.Deployment{}
