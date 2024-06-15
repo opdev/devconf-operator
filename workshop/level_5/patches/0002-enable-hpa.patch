@@ -1,0 +1,22 @@
+diff --git a/config/samples/devconfcz_v1alpha1_recipe.yaml b/config/samples/devconfcz_v1alpha1_recipe.yaml
+index c98b6dd..d1a60c1 100644
+--- a/config/samples/devconfcz_v1alpha1_recipe.yaml
++++ b/config/samples/devconfcz_v1alpha1_recipe.yaml
+@@ -9,6 +9,17 @@ spec:
+     runAsNonRoot: false
+   podSecurityContext:
+     runAsNonRoot: false
++  hpa:
++    minReplicas: 1
++    maxReplicas: 2
++    targetMemoryUtilization: 60
++  resources:
++    limits:
++      cpu: 100m
++      memory: 128Mi
++    requests:
++      cpu: 5m
++      memory: 64Mi
+   database:
+     image: mysql:5.7
+     securityContext:

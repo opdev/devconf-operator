@@ -1,0 +1,178 @@
+diff --git a/api/v1alpha1/recipe_types.go b/api/v1alpha1/recipe_types.go
+index 1d3d003..554d10f 100644
+--- a/api/v1alpha1/recipe_types.go
++++ b/api/v1alpha1/recipe_types.go
+@@ -42,12 +42,33 @@ type RecipeSpec struct {
+ 	// +optional
+ 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+ 
++	// Resources to set for Level 3 and 5.
++	// +optional
++	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
++
++	// Hpa specifies the pod autoscaling configuration to use
++	// for the workload.
++	// +optional
++	Hpa *HpaSpec `json:"hpa,omitempty"`
++
+ 	// Database specifies the database configuration to use
+ 	// for the workload.
+ 	// +optional
+ 	Database DatabaseSpec `json:"database,omitempty"`
+ }
+ 
++type HpaSpec struct {
++	// MinReplicas sets a lower bound to the autoscaling feature.  Set this if your are using autoscaling. It must be at least 1
++	// +optional
++	MinReplicas *int32 `json:"minReplicas,omitempty"`
++	// MaxReplicas sets an upper bound to the autoscaling feature. If MaxReplicas is set autoscaling is enabled.
++	// +optional
++	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
++	// +optional
++	// TargetMemoryUtilization sets the target average memory utilization across all replicas
++	TargetMemoryUtilization *int32 `json:"targetMemoryUtilization,omitempty"`
++}
++
+ type DatabaseSpec struct {
+ 	// Image set the image which should be used at MySQL DB.
+ 	// +optional
+@@ -82,6 +103,7 @@ type BackupPolicySpec struct {
+ type RecipeStatus struct {
+ 	MySQLStatus     string `json:"mysqlStatus,omitempty"`
+ 	RecipeAppStatus string `json:"recipeAppStatus,omitempty"`
++	RecipeAppHpa    string `json:"recipeAppHpa,omitempty"`
+ }
+ 
+ //+kubebuilder:object:root=true
+diff --git a/internal/controller/recipe_controller.go b/internal/controller/recipe_controller.go
+index cdf5d97..37874c6 100644
+--- a/internal/controller/recipe_controller.go
++++ b/internal/controller/recipe_controller.go
+@@ -31,6 +31,7 @@ import (
+ 
+ 	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
+ 	resources "github.com/opdev/devconf-operator/internal/resources"
++	autoscalingv2 "k8s.io/api/autoscaling/v2"
+ )
+ 
+ // RecipeReconciler reconciles a Recipe object
+@@ -44,6 +45,8 @@ type RecipeReconciler struct {
+ //+kubebuilder:rbac:groups=devconfcz.opdev.com,resources=recipes/finalizers,verbs=update
+ //+kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=*
+ //+kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=*
++//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors;prometheusrule,verbs=*
++//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
+ //+kubebuilder:rbac:groups="",resources=configmaps;endpoints;events;persistentvolumeclaims;pods;namespaces;secrets;serviceaccounts;services;services/finalizers,verbs=*
+ 
+ // Reconcile is part of the main kubernetes reconciliation loop which aims to
+@@ -319,6 +322,39 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
+ 		return ctrl.Result{}, err
+ 	}
+ 
++	if recipe.Spec.Hpa != nil {
++		hpa, err := resources.AutoScaler(recipe, r.Scheme)
++		if err != nil {
++			log.Error(err, "Failed to create a HorizontalPodAutoscaler resource for recipe")
++			return ctrl.Result{}, err
++		}
++
++		foundHpa := &autoscalingv2.HorizontalPodAutoscaler{}
++		err = r.Get(ctx, client.ObjectKey{Name: hpa.Name, Namespace: hpa.Namespace}, foundHpa)
++		if err != nil && apierrors.IsNotFound(err) {
++			log.Info("Creating a new HorizontalPodAutoScaler", "HorizontalPodAutoScaler.Namespace", hpa.Namespace, "HorizontalPodAutoScaler.Name", hpa.Name)
++			err = r.Create(ctx, hpa)
++			if err != nil {
++				log.Error(err, "Failed to create new HorizontalPodAutoScaler", "HorizontalPodAutoScaler.Namespace", hpa.Namespace, "HorizontalPodAutoScaler.Name", hpa.Name)
++
++				// Update status for Recipe App HorizontalPodAutoScaler
++				recipe.Status.RecipeAppHpa = "HPA Created"
++				err = r.Status().Update(ctx, recipe)
++				if err != nil {
++					log.Error(err, "Failed to update recipe hpa status")
++					return ctrl.Result{}, err
++				}
++
++				return ctrl.Result{}, err
++			}
++			// HorizontalPodAutoScaler created successfully - return and requeue
++			return ctrl.Result{Requeue: true}, nil
++		} else if err != nil {
++			log.Error(err, "Failed to filter HorizontalPodAutoScaler")
++			return ctrl.Result{}, err
++		}
++	}
++
+ 	pvcCronJob, err := resources.PersistentVolumeClaimForBackup(recipe, r.Scheme)
+ 	if err != nil {
+ 		log.Error(err, "Failed to define PVC-CronJob for recipe")
+@@ -400,6 +436,7 @@ func (r *RecipeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+ 		Owns(&corev1.PersistentVolumeClaim{}).
+ 		Owns(&corev1.Secret{}).
+ 		Owns(&corev1.Service{}).
++		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
+ 		Owns(&batchv1.CronJob{}).
+ 		Owns(&batchv1.Job{}).
+ 		Complete(r)
+diff --git a/internal/resources/hpa.go b/internal/resources/hpa.go
+new file mode 100644
+index 0000000..403d90d
+--- /dev/null
++++ b/internal/resources/hpa.go
+@@ -0,0 +1,57 @@
++package resources
++
++import (
++	devconfczv1alpha1 "github.com/opdev/devconf-operator/api/v1alpha1"
++	autoscalingv2 "k8s.io/api/autoscaling/v2"
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	ctrl "sigs.k8s.io/controller-runtime"
++)
++
++// Autoscalers returns an HPAs based on specs.
++func AutoScaler(recipe *devconfczv1alpha1.Recipe, scheme *runtime.Scheme) (*autoscalingv2.HorizontalPodAutoscaler, error) {
++	metrics := []autoscalingv2.MetricSpec{}
++
++	if recipe.Spec.Hpa.TargetMemoryUtilization != nil {
++		memoryTarget := autoscalingv2.MetricSpec{
++			Type: autoscalingv2.ResourceMetricSourceType,
++			Resource: &autoscalingv2.ResourceMetricSource{
++				Name: corev1.ResourceMemory,
++				Target: autoscalingv2.MetricTarget{
++					Type:               autoscalingv2.UtilizationMetricType,
++					AverageUtilization: recipe.Spec.Hpa.TargetMemoryUtilization,
++				},
++			},
++		}
++		metrics = append(metrics, memoryTarget)
++	}
++
++	hpa := &autoscalingv2.HorizontalPodAutoscaler{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      recipe.Name + "-hpa",
++			Namespace: recipe.Namespace,
++			Labels:    recipe.Labels,
++		},
++		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
++			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
++				APIVersion: "devconfcz.opdev.com/v1alpha1",
++				Kind:       "Recipe",
++				Name:       recipe.Name,
++			},
++			MinReplicas: recipe.Spec.Hpa.MinReplicas,
++			MaxReplicas: func(max *int32) int32 {
++				if max == nil {
++					return 0
++				}
++				return *max
++			}(recipe.Spec.Hpa.MaxReplicas),
++			Metrics: metrics,
++		},
++	}
++	// Set the ownerRef for the HorizontalPodAutoScaler
++	if err := ctrl.SetControllerReference(recipe, hpa, scheme); err != nil {
++		return nil, err
++	}
++	return hpa, nil
++}
