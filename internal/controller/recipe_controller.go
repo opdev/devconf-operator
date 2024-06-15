@@ -375,48 +375,52 @@ func (r *RecipeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	cronJob, err := resources.CronJobForMySqlBackup(recipe, r.Scheme)
-	if err != nil {
-		log.Error(err, "Failed to create a CronJob Backup resource for recipe")
-		return ctrl.Result{}, err
-	}
-
-	foundCronJob := &batchv1.CronJob{}
-	err = r.Get(ctx, client.ObjectKey{Name: cronJob.Name, Namespace: cronJob.Namespace}, foundCronJob)
-	if err != nil && apierrors.IsNotFound(err) {
-		log.Info("Creating a new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
-		err = r.Create(ctx, cronJob)
+	if recipe.Spec.Database.BackupPolicy.Schedule != "" {
+		cronJob, err := resources.CronJobForMySqlBackup(recipe, r.Scheme)
 		if err != nil {
-			log.Error(err, "Failed to create new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
+			log.Error(err, "Failed to create a CronJob Backup resource for recipe")
 			return ctrl.Result{}, err
 		}
-		// CronJob created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to filter CronJob")
-		return ctrl.Result{}, err
-	}
 
-	job, err := resources.JobForMySqlRestore(recipe, r.Scheme)
-	if err != nil {
-		log.Error(err, "Failed to define Restore Job for recipe")
-		return ctrl.Result{}, err
-	}
-	// Check if the job already exists
-	foundJob := &batchv1.Job{}
-	err = r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, foundJob)
-	if err != nil && apierrors.IsNotFound(err) {
-		log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = r.Create(ctx, job)
-		if err != nil {
-			log.Error(err, "Failed to create new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+		foundCronJob := &batchv1.CronJob{}
+		err = r.Get(ctx, client.ObjectKey{Name: cronJob.Name, Namespace: cronJob.Namespace}, foundCronJob)
+		if err != nil && apierrors.IsNotFound(err) {
+			log.Info("Creating a new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
+			err = r.Create(ctx, cronJob)
+			if err != nil {
+				log.Error(err, "Failed to create new CronJob", "CronJob.Namespace", cronJob.Namespace, "CronJob.Name", cronJob.Name)
+				return ctrl.Result{}, err
+			}
+			// CronJob created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to filter CronJob")
 			return ctrl.Result{}, err
 		}
-		// Job created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to filter Job")
-		return ctrl.Result{}, err
+	}
+
+	if recipe.Spec.Database.InitRestore {
+		job, err := resources.JobForMySqlRestore(recipe, r.Scheme)
+		if err != nil {
+			log.Error(err, "Failed to define Restore Job for recipe")
+			return ctrl.Result{}, err
+		}
+		// Check if the job already exists
+		foundJob := &batchv1.Job{}
+		err = r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, foundJob)
+		if err != nil && apierrors.IsNotFound(err) {
+			log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+			err = r.Create(ctx, job)
+			if err != nil {
+				log.Error(err, "Failed to create new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+				return ctrl.Result{}, err
+			}
+			// Job created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to filter Job")
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

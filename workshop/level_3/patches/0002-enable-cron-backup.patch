@@ -6,8 +6,8 @@ index 0b12f82..6cda10d 100644
        runAsNonRoot: false
      podSecurityContext:
        runAsNonRoot: false
-+  backupPolicySpec:
-+    volumeName: "-backup"
-+    schedule: "*/1 * * * *"
-+    timezone: "Europe/Berlin"
++    backupPolicySpec:
++      volumeName: "-backup"
++      schedule: "*/1 * * * *"
++      timezone: "Europe/Berlin"
 

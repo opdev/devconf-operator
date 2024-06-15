@@ -75,6 +75,12 @@ $ oc apply -f config/samples/devconfcz_v1alpha1_recipe.yaml
 $ oc get po,deploy,pvc,secrets,configmap,service
 ```
 
+## Test access
+
+```shell
+$ oc expose svc/recipe-sample
+```
+
 # To go further...
 
 * With the current implementation, resources are not being reconciled if they are modified externally (with the exception of the frontend's deployment replica count). We only check for the existence of a child resource.
